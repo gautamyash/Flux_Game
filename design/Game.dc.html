@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX Game screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.fx-btn{border:0;background:none;padding:0;font-family:Figtree,sans-serif;cursor:pointer}
+</style>
+</helmet>
+<div style="width:{{w}}px;height:{{h}}px;box-sizing:border-box;background:{{t.bg}};color:{{t.text}};font-family:Figtree,sans-serif;display:grid;grid-template-columns:{{cols}};grid-template-rows:{{rows}};grid-template-areas:{{areas}};overflow:hidden;position:relative">
+
+  <div style="grid-area:safe"></div>
+
+  <div style="grid-area:top;display:flex;align-items:center;justify-content:space-between;padding:0 {{m}}px;height:56px">
+    <button class="fx-btn" aria-label="Pause" style="width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:{{t.text}}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg>
+    </button>
+    <div style="text-align:center;min-width:0">
+      <div style="font-family:Sora,sans-serif;font-weight:700;font-size:17px;line-height:22px;letter-spacing:-0.01em">{{m1.label}}</div>
+      <div style="font-size:13px;line-height:18px;color:{{t.text2}}">{{m1.sub}}</div>
+    </div>
+    <button class="fx-btn" aria-label="Menu and settings" style="width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:{{t.text}}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7 H14 M18 7 H20 M4 17 H6 M10 17 H20"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+  </div>
+
+  <div style="grid-area:hud;padding:2px {{m}}px 10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span style="font-size:13px;color:{{t.text2}};font-weight:500">{{hud.l1}}</span>
+        <span style="font-family:Sora,sans-serif;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums">{{hud.v1}}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <sc-if value="{{hud.showBonus}}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:{{t.raised}};box-shadow:inset 0 0 0 1px {{t.grid}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="{{t.bonus}}" stroke="{{t.bonus}}" stroke-width="2" stroke-linejoin="round"><path d="M12 3 L14.8 9 L21 9.7 L16.4 14 L17.7 20.5 L12 17.3 L6.3 20.5 L7.6 14 L3 9.7 L9.2 9 Z"/></svg>
+          <span style="font-family:Sora,sans-serif;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums">{{hud.bonus}}</span>
+        </div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:{{t.raised}};box-shadow:inset 0 0 0 1px {{t.grid}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{t.text2}}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9 V13 L14.5 14.5 M9 2.5 H15"/></svg>
+          <span style="font-family:Sora,sans-serif;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums">{{hud.v2}}</span>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{hud.showBar}}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:10px;height:8px;border-radius:4px;background:{{t.grid}};overflow:hidden"><div style="width:{{hud.bar}}%;height:100%;border-radius:4px;background:{{t.accent}}"></div></div>
+    </sc-if>
+  </div>
+
+  <div style="grid-area:board;display:flex;align-items:center;justify-content:center;min-height:0;min-width:0;overflow:hidden;position:relative">
+    <div style="flex:none"><dc-import name="Board" scene="{{scene}}" size="{{board}}" theme="{{theme}}" hint-size="358px,358px"></dc-import></div>
+    <sc-if value="{{small}}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:{{t.text}};color:{{t.bg}};font:600 12px/16px Figtree,sans-serif;white-space:nowrap">Drag to pan · pinch to zoom</div></sc-if>
+  </div>
+
+  <div style="grid-area:track;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px {{m}}px 4px">
+    <sc-for list="{{dots}}" as="d" hint-placeholder-count="5">
+      <div style="width:28px;height:28px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:Sora,sans-serif;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;background:{{d.bg}};color:{{d.fg}};box-shadow:inset 0 0 0 2px {{d.ring}}">{{d.n}}</div>
+    </sc-for>
+  </div>
+
+  <div style="grid-area:fb;align-self:end;padding:8px {{m}}px 8px">
+    <div style="min-height:44px;box-sizing:border-box;border-radius:14px;padding:8px 14px;display:flex;align-items:center;gap:10px;background:{{fb.bg}};box-shadow:inset 0 0 0 1px {{fb.ring}}">
+      <span style="width:8px;height:8px;border-radius:50%;background:{{fb.dot}};flex:none"></span>
+      <span style="font-size:14px;line-height:20px;font-weight:500;color:{{t.text}}">{{m1.msg}}</span>
+    </div>
+  </div>
+
+  <div style="grid-area:act;display:flex;justify-content:center;gap:{{actGap}}px;padding:8px {{m}}px 6px;flex-direction:{{actDir}}">
+    <button class="fx-btn" aria-label="Undo last move" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:{{t.text}}">
+      <span style="width:56px;height:56px;border-radius:18px;background:{{t.raised}};box-shadow:inset 0 0 0 1px {{t.grid}};display:flex;align-items:center;justify-content:center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L4 10 L9 15"/><path d="M4 10 H14 A6 6 0 0 1 14 22 H10"/></svg>
+      </span>
+      <span style="font-size:12px;font-weight:600;color:{{t.text2}}">Undo</span>
+    </button>
+    <button class="fx-btn" aria-label="Hint, {{m1.hints}} left" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:{{t.onAccent}};position:relative">
+      <span style="width:56px;height:56px;border-radius:18px;background:{{t.accent}};display:flex;align-items:center;justify-content:center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18 H15 M10 21 H14"/><path d="M12 3 A6 6 0 0 0 8 13.5 C8.7 14.2 9 15 9 16 H15 C15 15 15.3 14.2 16 13.5 A6 6 0 0 0 12 3 Z"/></svg>
+      </span>
+      <span style="position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:10px;padding:0 5px;box-sizing:border-box;background:{{t.text}};color:{{t.bg}};font-family:Sora,sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center">{{m1.hints}}</span>
+      <span style="font-size:12px;font-weight:600;color:{{t.text2}}">Hint</span>
+    </button>
+    <button class="fx-btn" aria-label="Restart level" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:{{t.text}}">
+      <span style="width:56px;height:56px;border-radius:18px;background:{{t.raised}};box-shadow:inset 0 0 0 1px {{t.grid}};display:flex;align-items:center;justify-content:center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 A8 8 0 1 0 17.7 17.7"/><path d="M20 5 V12 H13"/></svg>
+      </span>
+      <span style="font-size:12px;font-weight:600;color:{{t.text2}}">Restart</span>
+    </button>
+  </div>
+
+  <div style="grid-area:inset"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","default":"mid","options":["fresh","mid","tele","burn","freeze","switch","count","dir","near","done","dense","hint","tut","mini","trap"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"w":{"editor":"int","default":390},"h":{"editor":"int","default":844},"mode":{"editor":"enum","default":"classic","options":["classic","rush","endless"]},"lefty":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(dark) {
+    const L = {bg:'#F6F3EE',raised:'#FFFFFF',grid:'#DDD6CA',text:'#16161A',text2:'#5C5A57',accent:'#0B7F7A',accentSoft:'#D6EFEC',onAccent:'#FFFFFF',danger:'#C8372D',warn:'#B7791F',bonus:'#B37A00',freeze:'#1E8FC9'};
+    const D = {bg:'#131210',raised:'#282621',grid:'#34312B',text:'#F2EEE6',text2:'#A9A397',accent:'#3FD1C4',accentSoft:'#123A37',onAccent:'#0A1F1E',danger:'#FF7468',warn:'#E0A73A',bonus:'#FFC93D',freeze:'#6CC7F5'};
+    return dark ? D : L;
+  }
+  meta() {
+    const w4 = 'Chapter 4 · Warp';
+    return {
+      fresh: { label: 'Level 27', sub: w4, moves: '0 / 24', msg: 'Drag from 1 to begin. Touch any cell to start.', tone: 'info', N: 5, R: 0, hints: 3, bonus: '0 / 1' },
+      mid: { label: 'Level 27', sub: w4, moves: '7 / 24', msg: 'Node 2 reached. Next target: 3.', tone: 'info', N: 5, R: 2, hints: 3, bonus: '0 / 1' },
+      tele: { label: 'Level 31', sub: w4, moves: '8 / 24', msg: 'Teleport used. Exit opened at row 5, column 5.', tone: 'tele', N: 4, R: 2, hints: 3, bonus: '0 / 0' },
+      burn: { label: 'Level 20', sub: 'Chapter 3 · Hazards', moves: '3 / 22', msg: 'Burn cell will be lost once you leave it.', tone: 'warn', N: 5, R: 1, hints: 3, bonus: '0 / 0' },
+      freeze: { label: 'Level 37', sub: 'Chapter 5 · Freeze', moves: '4 / 24', msg: 'Frozen: 8 neighbours locked for 3 moves.', tone: 'ice', N: 5, R: 1, hints: 2, bonus: '0 / 0' },
+      'switch': { label: 'Level 45', sub: 'Chapter 6 · Switch', moves: '7 / 26', msg: 'Switch ON. 2 gates opened.', tone: 'info', N: 5, R: 2, hints: 2, bonus: '0 / 0' },
+      count: { label: 'Level 53', sub: 'Chapter 7 · Pressure', moves: '4 / 20', msg: 'The countdown cell expires after your next move.', tone: 'warn', N: 4, R: 2, hints: 2, bonus: '0 / 0' },
+      dir: { label: 'Level 12', sub: 'Chapter 2 · Direction', moves: '1 / 18', msg: 'Wrong direction. Exit must be →', tone: 'error', N: 5, R: 1, hints: 3, bonus: '0 / 0' },
+      near: { label: 'Level 27', sub: w4, moves: '18 / 24', msg: 'One node to go. 5 is next to your finger.', tone: 'info', N: 5, R: 4, hints: 1, bonus: '1 / 2' },
+      done: { label: 'Level 27', sub: w4, moves: '19 / 24', msg: 'Solved.', tone: 'info', N: 5, R: 5, hints: 1, bonus: '1 / 2' },
+      dense: { label: 'Level 64', sub: 'Chapter 8 · Master', moves: '5 / 38', msg: 'Node 2 reached. Next: 3. Mind the portals.', tone: 'info', N: 5, R: 2, hints: 2, bonus: '0 / 2' },
+      hint: { label: 'Level 27', sub: w4, moves: '1 / 24', msg: 'Hint: pass the arrow, then step into the portal.', tone: 'hint', N: 5, R: 1, hints: 2, bonus: '0 / 1' },
+      tut: { label: 'Level 1', sub: 'Chapter 1 · Basics', moves: '2 / 4', msg: 'Nice. Keep going to 3.', tone: 'info', N: 3, R: 2, hints: 3, bonus: '0 / 0' },
+      mini: { label: 'Level 9', sub: 'Chapter 2 · Direction', moves: '4 / 10', msg: 'Next target: 3.', tone: 'info', N: 5, R: 2, hints: 3, bonus: '0 / 0' },
+      trap: { label: 'Level 5', sub: 'Chapter 1 · Basics', moves: '3 / 10', msg: 'No valid move from here. Undo to continue.', tone: 'error', N: 3, R: 1, hints: 3, bonus: '0 / 0' }
+    };
+  }
+  renderVals() {
+    const p = this.props;
+    const w = Number(p.w) || 390, h = Number(p.h) || 844;
+    const dark = p.theme === 'dark';
+    const t = this.pal(dark);
+    const scene = p.scene || 'mid';
+    const m1 = this.meta()[scene] || this.meta().mid;
+    const land = w > h;
+    const tablet = Math.min(w, h) >= 700;
+    const m = tablet ? 24 : 16;
+    const safeTop = tablet ? 24 : 44, inset = tablet ? 16 : 24;
+    const grid = { dense: 8, tut: 3, mini: 5, trap: 4 }[scene] || 6;
+    let board, cols, rows, areas;
+    if (land) {
+      const panel = 340;
+      board = Math.min(h - safeTop - inset - 2 * m, w - panel - 3 * m, 760);
+      cols = (board + 2 * m) + 'px 1fr';
+      rows = safeTop + 'px 56px auto auto 1fr auto ' + inset + 'px';
+      areas = '"board safe" "board top" "board hud" "board track" "board fb" "board act" "board inset"';
+    } else {
+      const avail = h - safeTop - 56 - 60 - 48 - 56 - 100 - inset;
+      board = Math.min(w - 2 * m, avail, 760);
+      cols = '1fr';
+      rows = safeTop + 'px 56px auto 1fr auto auto auto ' + inset + 'px';
+      areas = '"safe" "top" "hud" "board" "track" "fb" "act" "inset"';
+    }
+    let cell = Math.floor(board / grid);
+    const small = cell < 40;
+    if (small) cell = 40;
+    board = cell * grid;
+    const mode = p.mode || 'classic';
+    const hud = { l1: 'Moves', v1: m1.moves, v2: '01:12', showBonus: m1.bonus !== '0 / 0', bonus: m1.bonus, showBar: false, bar: 0 };
+    if (mode === 'rush') { hud.l1 = 'Score'; hud.v1 = '1,240'; hud.v2 = '00:38'; hud.showBar = true; hud.bar = 62; hud.showBonus = false; }
+    if (mode === 'endless') { hud.l1 = 'Streak'; hud.v1 = '12'; hud.v2 = 'Best 21'; hud.showBonus = false; }
+    const lab = Object.assign({}, m1);
+    if (mode === 'rush') lab.sub = 'Rush · Level ' + m1.label.split(' ')[1];
+    if (mode === 'endless') { lab.label = 'Endless'; lab.sub = 'Board 7 × 7 · Streak 12'; }
+    const toneMap = {
+      info: [t.accentSoft, t.accent, t.accent], hint: [t.accentSoft, t.accent, t.accent],
+      warn: [dark ? '#3A2D12' : '#F7EBD3', t.warn, t.warn], error: [dark ? '#3E1B18' : '#F8E2DF', t.danger, t.danger],
+      ice: [dark ? '#143040' : '#DCEEF8', t.freeze, t.freeze], tele: [dark ? '#2B2147' : '#EADFF8', dark ? '#B592FF' : '#7A45D6', dark ? '#B592FF' : '#7A45D6']
+    };
+    const tm = toneMap[m1.tone] || toneMap.info;
+    const dots = [];
+    for (let i = 1; i <= m1.N; i++) {
+      const reached = i <= m1.R, nxt = i === m1.R + 1;
+      dots.push({ n: i, bg: reached ? t.accent : 'transparent', fg: reached ? t.onAccent : (nxt ? t.text : t.text2), ring: reached ? t.accent : (nxt ? t.accent : t.grid) });
+    }
+    return {
+      w, h, t, m, small, theme: p.theme || 'light', scene, board, cols, rows, areas, m1: lab, hud, dots,
+      fb: { bg: tm[0], dot: tm[1], ring: dark ? 'rgba(255,255,255,0.08)' : 'rgba(22,22,26,0.08)' },
+      actGap: tablet || land ? 28 : 24, actDir: p.lefty ? 'row-reverse' : 'row'
+    };
+  }
+}
+</script>
+</body>
+</html>

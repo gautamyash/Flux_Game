@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.h2{font:700 20px/26px Sora,sans-serif;margin:0}
+.lab{font:600 12px/16px Figtree,sans-serif;opacity:.7}
+.sec{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cap{font:500 11px/14px ui-monospace,Menlo,monospace;opacity:.7;text-align:center}
+</style>
+</helmet>
+<div style="width:2260px;height:2900px;box-sizing:border-box;padding:64px;background:#EFEBE4;font-family:Figtree,sans-serif;color:#16161A;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="k" style="color:#0B7F7A">09 · Component library with states matrix</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">Light and dark, state by state.</div>
+  </div>
+  <div style="display:flex;gap:32px;align-items:flex-start">
+  <sc-for list="{{panels}}" as="P" hint-placeholder-count="2">
+    <div style="flex:1;border-radius:28px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:30px;{{P.vars}};background:{{P.bg}};color:{{P.tx}};box-shadow:{{P.sh}}">
+      <div class="k" style="color:{{P.ac}}">{{P.title}}</div>
+
+      <div class="sec"><h2 class="h2">Button</h2><div class="lab">Primary · Secondary · Ghost · Destructive × Default · Pressed · Focus · Disabled</div>
+        <sc-for list="{{P.buttons}}" as="r" hint-placeholder-count="4"><div class="row"><sc-for list="{{r.cells}}" as="b" hint-placeholder-count="4"><div style="{{b.st}}">{{b.t}}</div></sc-for></div></sc-for>
+      </div>
+
+      <div class="sec"><h2 class="h2">IconButton · Switch · Segmented · Slider · Progress</h2>
+        <div class="row">
+          <sc-for list="{{P.icons}}" as="b" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="{{b.st}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7 H14 M18 7 H20 M4 17 H6 M10 17 H20 M14 7 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 M6 17 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0"/></svg></div><span class="cap">{{b.t}}</span></div></sc-for>
+          <div style="width:24px"></div>
+          <sc-for list="{{P.toggles}}" as="b" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:48px;height:28px;border-radius:14px;position:relative;background:{{b.bg}};opacity:{{b.op}}"><i style="position:absolute;top:3px;left:{{b.kx}}px;width:22px;height:22px;border-radius:50%;background:{{b.kc}}"></i></div><span class="cap">{{b.t}}</span></div></sc-for>
+        </div>
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div style="width:260px;display:flex;gap:4px;padding:4px;border-radius:14px;background:{{P.bgd}}"><sc-for list="{{P.seg}}" as="o" hint-placeholder-count="3"><div style="flex:1;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font:600 13px/16px Figtree;background:{{o.bg}};color:{{o.fg}};box-shadow:{{o.sh}}">{{o.t}}</div></sc-for></div>
+          <div style="width:220px;padding-top:12px"><div style="height:6px;border-radius:3px;background:{{P.gr}};position:relative"><div style="width:55%;height:100%;border-radius:3px;background:{{P.ac}}"></div><div style="position:absolute;left:55%;top:-9px;margin-left:-12px;width:24px;height:24px;border-radius:50%;background:{{P.rs}};box-shadow:0 1px 4px rgba(0,0,0,.3),inset 0 0 0 2px {{P.ac}}"></div></div><div class="cap" style="padding-top:12px">Slider · haptic intensity</div></div>
+          <div style="width:220px;display:flex;flex-direction:column;gap:8px"><sc-for list="{{P.bars}}" as="b" hint-placeholder-count="3"><div style="height:8px;border-radius:4px;background:{{P.gr}};overflow:hidden"><div style="height:100%;width:{{b.w}}%;background:{{b.c}}"></div></div></sc-for><div class="cap">Linear · 0 / 45 / 100%</div></div>
+          <div style="display:flex;gap:10px"><sc-for list="{{P.rings}}" as="b" hint-placeholder-count="3"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="{{P.gr}}" stroke-width="4"/><circle cx="20" cy="20" r="16" stroke="{{P.ac}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{b.d}} 100.5" transform="rotate(-90 20 20)"/></svg></sc-for></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2 class="h2">Toast and feedback line · TopBar · BottomActionBar · Modal</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <sc-for list="{{P.tones}}" as="f" hint-placeholder-count="6"><div style="min-height:44px;border-radius:14px;padding:8px 14px;display:flex;align-items:center;gap:10px;box-sizing:border-box;background:{{f.bg}};box-shadow:inset 0 0 0 1px {{P.line}}"><span style="width:8px;height:8px;border-radius:50%;background:{{f.dot}};flex:none"></span><span style="font:500 13px/18px Figtree">{{f.t}}</span></div></sc-for>
+        </div>
+        <div class="row" style="align-items:flex-start;gap:20px">
+          <div style="width:300px;border-radius:18px;background:{{P.bgd}};padding:8px 10px;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box"><span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></span><span style="text-align:center"><b style="font:700 14px/18px Sora">Level 27</b><br><span style="font:400 11px/14px Figtree;opacity:.7">Chapter 4 · Warp</span></span><span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7 H14 M18 7 H20 M4 17 H6 M10 17 H20"/></svg></span></div>
+          <div style="width:260px;border-radius:18px;background:{{P.bgd}};padding:10px;display:flex;justify-content:space-around;box-sizing:border-box"><sc-for list="{{P.actions}}" as="a" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/12px Figtree"><span style="width:40px;height:40px;border-radius:13px;background:{{a.bg}};color:{{a.fg}};box-shadow:{{a.sh}};display:flex;align-items:center;justify-content:center;font:700 14px Sora">{{a.g}}</span>{{a.t}}</div></sc-for></div>
+          <div style="width:220px;border-radius:22px;background:{{P.rs}};box-shadow:0 12px 30px rgba(0,0,0,.2),inset 0 0 0 1px {{P.gr}};padding:14px;box-sizing:border-box"><b style="font:700 15px/20px Sora">Restart level?</b><div style="font:400 12px/16px Figtree;opacity:.7;margin:4px 0 10px">Stars and best time stay safe.</div><div style="height:36px;border-radius:12px;background:{{P.ac}};color:{{P.oa}};font:700 13px/36px Figtree;text-align:center">Restart</div></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2 class="h2">ChapterCard · LevelNode · ModeCard · StatCard</h2>
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <sc-for list="{{P.chapters}}" as="c" hint-placeholder-count="3"><div style="width:150px;height:96px;border-radius:18px;padding:12px;box-sizing:border-box;background:{{c.bg}};box-shadow:inset 0 0 0 {{c.bw}}px {{c.bc}};opacity:{{c.op}};display:flex;flex-direction:column;justify-content:space-between"><div><div style="font:600 10px/12px Figtree;opacity:.7">CHAPTER {{c.n}}</div><div style="font:700 15px/20px Sora">{{c.name}}</div></div><div style="font:600 11px/14px Figtree;opacity:.8">{{c.s}}</div></div></sc-for>
+          <div style="width:2px"></div>
+          <sc-for list="{{P.nodes}}" as="n" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:48px;height:48px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:{{n.bg}};color:{{n.fg}};box-shadow:{{n.sh}};border-radius:{{n.rad}};transform:rotate({{n.rot}}deg);font:700 16px Sora"><span style="transform:rotate({{n.irot}}deg)">{{n.v}}</span></div><span class="cap">{{n.t}}</span></div></sc-for>
+        </div>
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <sc-for list="{{P.modes}}" as="m" hint-placeholder-count="3"><div style="width:210px;border-radius:16px;padding:12px;box-sizing:border-box;background:{{P.rs}};box-shadow:inset 0 0 0 1px {{P.gr}};opacity:{{m.op}};display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:12px;background:{{m.tint}}33;flex:none"></div><div><div style="font:700 14px/18px Sora">{{m.name}}</div><div style="font:400 11px/14px Figtree;opacity:.7">{{m.s}}</div></div></div></sc-for>
+          <div style="width:150px;border-radius:16px;padding:12px;box-sizing:border-box;background:{{P.rs}};box-shadow:inset 0 0 0 1px {{P.gr}}"><div style="font:600 10px/12px Figtree;opacity:.7">PERFECT SOLVES</div><div style="font:700 24px/32px Sora">11</div></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2 class="h2">AchievementCard · ThemeCard · GameResult</h2>
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <sc-for list="{{P.ach}}" as="a" hint-placeholder-count="3"><div style="width:140px;height:92px;border-radius:16px;padding:10px;box-sizing:border-box;background:{{a.bg}};box-shadow:inset 0 0 0 {{a.bw}}px {{a.bc}};opacity:{{a.op}};display:flex;flex-direction:column;justify-content:space-between"><div style="font:700 13px/16px Sora">{{a.name}}</div><div><div style="font:400 11px/14px Figtree;opacity:.7">{{a.s}}</div><div style="height:4px;border-radius:2px;background:{{P.gr}};margin-top:4px"><div style="height:100%;width:{{a.p}}%;background:{{a.c}};border-radius:2px"></div></div></div></div></sc-for>
+          <sc-for list="{{P.themes}}" as="a" hint-placeholder-count="3"><div style="width:100px;border-radius:16px;padding:8px;box-sizing:border-box;background:{{P.rs}};box-shadow:inset 0 0 0 {{a.bw}}px {{a.bc}};opacity:{{a.op}};display:flex;flex-direction:column;gap:6px;align-items:center"><dc-import name="Board" scene="mini" size="72" theme="{{P.theme}}" skin="{{a.skin}}" hint-size="72px,72px"></dc-import><span style="font:600 11px/14px Figtree">{{a.name}}</span></div></sc-for>
+          <div style="width:210px;border-radius:18px;padding:12px;box-sizing:border-box;background:{{P.rs}};box-shadow:inset 0 0 0 1px {{P.gr}};display:flex;gap:10px;align-items:center"><dc-import name="Board" scene="done" size="64" theme="{{P.theme}}" hint-size="64px,64px"></dc-import><div><div style="font:700 13px/16px Sora;color:{{P.bonus}}">★★★</div><div style="font:600 12px/16px Figtree">Level 27 · 18 moves</div><div style="font:400 11px/14px Figtree;opacity:.7">01:12 · optimal</div></div></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2 class="h2">Board components</h2><div class="lab">NumberNode · EmptyCell · PathCell · BlockedCell · DirectionCell ×4 · BurnCell · TeleportCell · FreezeCell · SwitchCell · GateCell · BonusCell · CountdownCell</div>
+        <sc-for list="{{P.cellRows}}" as="r" hint-placeholder-count="14">
+          <div style="display:flex;gap:10px;align-items:center"><div style="width:96px;font:600 12px/16px Figtree">{{r.name}}</div>
+            <sc-for list="{{r.cells}}" as="c" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="52" theme="{{P.theme}}" hint-size="52px,52px"></dc-import><span class="cap" style="font-size:9px">{{c.t}}</span></div></sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2260,"height":2900}}'>
+class Component extends DCLogic {
+  pal(dark) {
+    const L = {bg:'#F6F3EE',rs:'#FFFFFF',gr:'#DDD6CA',tx:'#16161A',t2:'#5C5A57',dis:'#A7A29A',ac:'#0B7F7A',as:'#D6EFEC',oa:'#FFFFFF',dg:'#C8372D',bonus:'#B37A00',warn:'#B7791F',tele:'#7A45D6',freeze:'#1E8FC9',dir:'#4A56D6',burn:'#D9641A',sw:'#C42E75',bgd:'#EFEBE4'};
+    const D = {bg:'#131210',rs:'#282621',gr:'#34312B',tx:'#F2EEE6',t2:'#A9A397',dis:'#6A665D',ac:'#3FD1C4',as:'#123A37',oa:'#0A1F1E',dg:'#FF7468',bonus:'#FFC93D',warn:'#E0A73A',tele:'#B592FF',freeze:'#6CC7F5',dir:'#8E98FF',burn:'#FF9A52',sw:'#FF7DB0',bgd:'#1D1C19'};
+    return dark ? D : L;
+  }
+  build(dark) {
+    const t = this.pal(dark);
+    const base = 'display:flex;align-items:center;justify-content:center;height:44px;min-width:104px;padding:0 10px;box-sizing:border-box;border-radius:14px;font:700 14px/18px Figtree,sans-serif;';
+    const focus = 'box-shadow:0 0 0 3px ' + t.bg + ',0 0 0 5px ' + t.ac + ';';
+    const V = {
+      Primary: { bg: t.ac, fg: t.oa, ring: 'none' }, Secondary: { bg: t.rs, fg: t.tx, ring: 'inset 0 0 0 1.5px ' + t.gr },
+      Ghost: { bg: 'transparent', fg: t.ac, ring: 'none' }, Destructive: { bg: t.dg, fg: t.oa, ring: 'none' }
+    };
+    const buttons = Object.keys(V).map((name) => {
+      const v = V[name];
+      const cell = (state) => {
+        let st = base + 'background:' + v.bg + ';color:' + v.fg + ';box-shadow:' + v.ring + ';';
+        if (state === 'Pressed') st += 'transform:scale(0.97);filter:brightness(0.9);';
+        if (state === 'Focus') st = base + 'background:' + v.bg + ';color:' + v.fg + ';' + focus;
+        if (state === 'Disabled') st = base + 'background:' + (name === 'Ghost' ? 'transparent' : t.gr) + ';color:' + t.dis + ';box-shadow:none;';
+        return { st, t: name + (state === 'Default' ? '' : ' · ' + state) };
+      };
+      return { cells: ['Default', 'Pressed', 'Focus', 'Disabled'].map(cell) };
+    });
+    const ib = 'width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;';
+    const icons = [
+      { st: ib + 'background:' + t.rs + ';color:' + t.tx + ';box-shadow:inset 0 0 0 1px ' + t.gr, t: 'default' },
+      { st: ib + 'background:' + t.gr + ';color:' + t.tx + ';transform:scale(0.95)', t: 'pressed' },
+      { st: ib + 'background:' + t.as + ';color:' + t.ac + ';box-shadow:inset 0 0 0 2px ' + t.ac, t: 'selected' },
+      { st: ib + 'background:' + t.rs + ';color:' + t.dis + ';box-shadow:inset 0 0 0 1px ' + t.gr + ';opacity:.6', t: 'disabled' }
+    ];
+    const toggles = [
+      { bg: t.gr, kx: 3, kc: t.rs, op: 1, t: 'off' }, { bg: t.ac, kx: 23, kc: t.oa, op: 1, t: 'on' }, { bg: t.ac, kx: 23, kc: t.oa, op: 0.4, t: 'disabled' }
+    ];
+    const seg = ['System', 'Light', 'Dark'].map((x, i) => ({ t: x, bg: i === 1 ? t.rs : 'transparent', fg: i === 1 ? t.tx : t.t2, sh: i === 1 ? '0 1px 3px rgba(0,0,0,.18),inset 0 0 0 1px ' + t.gr : 'none' }));
+    const bars = [{ w: 0, c: t.ac }, { w: 45, c: t.ac }, { w: 100, c: t.ac }];
+    const rings = [{ d: '0' }, { d: '42' }, { d: '100.5' }];
+    const tones = [
+      { bg: t.as, dot: t.ac, t: 'Next target: 3' }, { bg: dark ? '#3A2D12' : '#F7EBD3', dot: t.warn, t: 'Burn cell will be lost' },
+      { bg: dark ? '#3E1B18' : '#F8E2DF', dot: t.dg, t: 'Wrong direction. Exit must be →' }, { bg: dark ? '#2B2147' : '#EADFF8', dot: t.tele, t: 'Teleport used' },
+      { bg: dark ? '#143040' : '#DCEEF8', dot: t.freeze, t: 'Frozen: 8 neighbours locked' }, { bg: t.rs, dot: t.gr, t: 'Neutral · saved on this device' }
+    ];
+    const actions = [
+      { g: '↶', t: 'Undo', bg: t.rs, fg: t.tx, sh: 'inset 0 0 0 1px ' + t.gr }, { g: '?', t: 'Hint', bg: t.ac, fg: t.oa, sh: 'none' }, { g: '↻', t: 'Restart', bg: t.rs, fg: t.tx, sh: 'inset 0 0 0 1px ' + t.gr }
+    ];
+    const chapters = [
+      { n: '03', name: 'Hazards', s: 'Complete', bg: t.rs, bw: 1, bc: t.gr, op: 1 }, { n: '04', name: 'Warp', s: '2 / 8 · current', bg: t.as, bw: 2, bc: t.ac, op: 1 }, { n: '05', name: 'Freeze', s: 'Locked', bg: t.rs, bw: 1, bc: t.gr, op: 0.55 }
+    ];
+    const nd = (v, tt, o) => Object.assign({ v, t: tt, bg: t.rs, fg: t.tx, sh: 'inset 0 0 0 1.5px ' + t.gr, rad: '50%', rot: 0, irot: 0 }, o);
+    const nodes = [
+      nd('25', 'perfect', { bg: t.ac, fg: t.oa, sh: '0 0 0 3px ' + t.bonus }), nd('26', 'completed', { bg: t.as, sh: 'inset 0 0 0 2px ' + t.ac }), nd('27', 'current', { bg: t.ac, fg: t.oa, sh: '0 0 0 5px ' + t.as + ',0 0 0 6px ' + t.ac }),
+      nd('28', 'available', { sh: 'inset 0 0 0 2.5px ' + t.ac }), nd('29', 'locked', { bg: t.bgd, fg: t.t2 }), nd('★', 'challenge', { rad: '12px', rot: 45, irot: -45, fg: t.bonus, sh: 'inset 0 0 0 2.5px ' + t.bonus })
+    ];
+    const modes = [
+      { name: 'Rush', s: 'Best 14', tint: t.burn, op: 1 }, { name: 'Master', s: 'Locked', tint: t.tx, op: 0.55 }, { name: 'Chaos', s: 'Coming soon', tint: t.tele, op: 0.55 }
+    ];
+    const ach = [
+      { name: 'Perfect Path', s: 'Unlocked', bg: t.as, bw: 1.5, bc: t.ac, op: 1, p: 100, c: t.ac }, { name: 'Speed Solver', s: '3 / 5', bg: t.rs, bw: 1, bc: t.gr, op: 1, p: 60, c: t.bonus }, { name: 'Freeze Expert', s: 'Locked', bg: t.rs, bw: 1, bc: t.gr, op: 0.55, p: 0, c: t.bonus }
+    ];
+    const themes = [
+      { name: 'Paper · selected', skin: '', bw: 2, bc: t.ac, op: 1 }, { name: 'Aurora', skin: 'aurora', bw: 1, bc: t.gr, op: 1 }, { name: 'Ink · locked', skin: 'ink', bw: 1, bc: t.gr, op: 0.6 }
+    ];
+    const c = (kind, tt, o) => Object.assign({ kind, t: tt, n: 0, state: 'idle', dir: 'r', pair: 1, flags: '' }, o || {});
+    const cellRows = [
+      { name: 'NumberNode', cells: [c('node', 'default', { n: 3, state: 'default' }), c('node', 'next', { n: 2, state: 'next' }), c('node', 'reached', { n: 1, state: 'reached', flags: 'start' }), c('node', 'final', { n: 5, state: 'final' }), c('node', 'locked', { n: 4, state: 'default', flags: 'locked' }), c('node', 'error', { n: 12, state: 'error' })] },
+      { name: 'EmptyCell', cells: [c('empty', 'default'), c('empty', 'path', { flags: 'path' }), c('empty', 'locked', { flags: 'locked' }), c('empty', 'hint', { flags: 'hint' }), c('empty', 'error', { flags: 'err' })] },
+      { name: 'BlockedCell', cells: [c('dead', 'dead')] },
+      { name: 'DirectionCell', cells: [c('dir', 'up', { dir: 'u' }), c('dir', 'right', { dir: 'r' }), c('dir', 'down', { dir: 'd' }), c('dir', 'left', { dir: 'l' }), c('dir', 'error', { dir: 'r', flags: 'err' })] },
+      { name: 'BurnCell', cells: [c('burn', 'idle'), c('burn', 'crossed', { state: 'crossed' }), c('burn', 'burned', { state: 'burned' })] },
+      { name: 'TeleportCell', cells: [c('tele', 'pair 1', { pair: 1 }), c('tele', 'pair 2', { pair: 2 }), c('tele', 'pair 3', { pair: 3 }), c('tele', 'entered', { state: 'entered' }), c('tele', 'burst', { state: 'burst' })] },
+      { name: 'FreezeCell', cells: [c('freeze', 'idle'), c('freeze', 'active', { state: 'active' }), c('freeze', 'thaw', { state: 'thaw' })] },
+      { name: 'SwitchCell', cells: [c('switch', 'off', { state: 'off' }), c('switch', 'on', { state: 'on' })] },
+      { name: 'GateCell', cells: [c('gate', 'closed', { state: 'closed' }), c('gate', 'open', { state: 'open' })] },
+      { name: 'BonusCell', cells: [c('bonus', 'idle'), c('bonus', 'collected', { state: 'collected' }), c('bonus', 'on path', { state: 'collected', flags: 'path' })] },
+      { name: 'CountdownCell', cells: [5, 4, 3, 2, 1, 0].map((v) => c('count', String(v), { n: v })) },
+      { name: 'PathCell', cells: [c('burn', 'path + burn', { state: 'crossed', flags: 'path' }), c('tele', 'path + portal', { state: 'entered', flags: 'path' }), c('dir', 'path + arrow', { dir: 'r', flags: 'path' }), c('count', 'path + count', { n: 3, flags: 'path' })] }
+    ];
+    return { theme: dark ? 'dark' : 'light', title: dark ? 'Dark' : 'Light', bg: dark ? '#131210' : '#F6F3EE', tx: t.tx, ac: t.ac, rs: t.rs, gr: t.gr, bgd: t.bgd, oa: t.oa, bonus: t.bonus, line: dark ? 'rgba(255,255,255,.08)' : 'rgba(22,22,26,.08)', sh: dark ? 'none' : 'inset 0 0 0 1px #DDD6CA',
+      vars: '--x:0', buttons, icons, toggles, seg, bars, rings, tones, actions, chapters, nodes, modes, ach, themes, cellRows };
+  }
+  renderVals() { return { panels: [this.build(false), this.build(true)] }; }
+}
+</script>
+</body>
+</html>

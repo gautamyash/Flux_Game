@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX principles</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:24px;box-sizing:border-box}
+.h2{font:700 22px/28px Sora,sans-serif;margin:0;letter-spacing:-.01em}
+.p{font:400 15px/22px Figtree,sans-serif;color:#4A4845;margin:0}
+</style>
+</helmet>
+<div style="width:1440px;height:1240px;box-sizing:border-box;padding:64px;background:#F6F3EE;color:#16161A;font-family:Figtree,sans-serif;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px">
+    <div>
+      <div class="k">Design system and screens · v1.0 · Android first, React Native ready</div>
+      <h1 style="font:700 76px/80px Sora,sans-serif;letter-spacing:-.03em;margin:14px 0 0">FLUX</h1>
+      <div style="font:500 26px/34px Sora,sans-serif;margin-top:6px;color:#0B7F7A">Connect. Adapt. Solve.</div>
+    </div>
+    <p class="p" style="max-width:520px;font-size:17px;line-height:26px">A calm, precise path puzzle. One finger draws one continuous line through numbered nodes while the board changes under it. Everything on these artboards is built from the same tokens, glyphs and board components an engineer will implement.</p>
+  </div>
+
+  <div style="display:flex;gap:32px;align-items:stretch">
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;flex:1">
+      <div class="card"><div class="k">01</div><h2 class="h2" style="margin-top:8px">The board is the hero</h2><p class="p" style="margin-top:8px">Board fills 92% of screen width, the largest square a portrait phone allows (about 42% of its height). In landscape it takes the full height. HUD stays at the edges and never overlaps it.</p></div>
+      <div class="card"><div class="k">02</div><h2 class="h2" style="margin-top:8px">One path, one accent</h2><p class="p" style="margin-top:8px">Flux Teal is the only brand hue. Chosen because it reads as calm and technical, sits far from LinkedIn blue, and keeps 3:1 against warm paper and warm black.</p></div>
+      <div class="card"><div class="k">03</div><h2 class="h2" style="margin-top:8px">Shape before colour</h2><p class="p" style="margin-top:8px">Every special cell has its own glyph and pattern. Tint is a hint, never the signal. Hatch means wall, chevron means direction, ring means portal.</p></div>
+      <div class="card"><div class="k">04</div><h2 class="h2" style="margin-top:8px">Explain, don't punish</h2><p class="p" style="margin-top:8px">Invalid moves retract one step and say why in one calm line. Failure is a pause with an undo, not a penalty screen.</p></div>
+      <div class="card"><div class="k">05</div><h2 class="h2" style="margin-top:8px">Motion carries meaning</h2><p class="p" style="margin-top:8px">Short, eased, purposeful: 80 to 260ms for play, up to 900ms for a solve. Reduced motion swaps every move for a fade.</p></div>
+      <div class="card"><div class="k">06</div><h2 class="h2" style="margin-top:8px">Built from tokens</h2><p class="p" style="margin-top:8px">4pt grid, a short radius scale, rounded rects, circles and SVG glyphs only. Nothing here needs more than SVG, Skia or Reanimated.</p></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:32px;align-items:flex-start;flex:1">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="k">Mood: precision instrument on warm paper</div>
+      <div style="display:flex;gap:24px;align-items:flex-start">
+        <dc-import name="Board" scene="mid" size="380" theme="light" hint-size="380px,380px"></dc-import>
+        <dc-import name="Board" scene="tele" size="380" theme="dark" hint-size="380px,380px"></dc-import>
+        <dc-import name="Board" scene="mini" size="380" theme="light" skin="sand" hint-size="380px,380px"></dc-import>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;flex:1">
+      <div class="k">Palette in one glance</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="width:92px;height:92px;border-radius:16px;background:#F6F3EE;box-shadow:inset 0 0 0 1px #DDD6CA;padding:10px;box-sizing:border-box;font:500 11px/14px Figtree">Paper<br>#F6F3EE</div>
+        <div style="width:92px;height:92px;border-radius:16px;background:#16161A;color:#F2EEE6;padding:10px;box-sizing:border-box;font:500 11px/14px Figtree">Ink<br>#16161A</div>
+        <div style="width:92px;height:92px;border-radius:16px;background:#0B7F7A;color:#fff;padding:10px;box-sizing:border-box;font:500 11px/14px Figtree">Flux Teal<br>#0B7F7A</div>
+        <div style="width:92px;height:92px;border-radius:16px;background:#131210;color:#F2EEE6;padding:10px;box-sizing:border-box;font:500 11px/14px Figtree">Warm black<br>#131210</div>
+        <div style="width:92px;height:92px;border-radius:16px;background:#3FD1C4;color:#0A1F1E;padding:10px;box-sizing:border-box;font:500 11px/14px Figtree">Teal dark<br>#3FD1C4</div>
+      </div>
+      <div class="card" style="display:flex;gap:28px;align-items:center">
+        <div style="font:700 64px/64px Sora,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em">1 2 3 47</div>
+        <div><div style="font:700 18px/24px Sora">Sora</div><p class="p">Logo and node numerals, tabular figures.</p><div style="font:700 18px/24px Figtree;margin-top:8px">Figtree</div><p class="p">UI text. Both are Google Fonts.</p></div>
+      </div>
+      <div class="card">
+        <div class="k">Artboards in this file</div>
+        <p class="p" style="margin-top:8px">Tokens · Logo and icon · Special cell legend and colour-blind proof · Board and path specimen · Game frames (light, dark, modes) · Animation and haptics · Screens (light and dark) · Component library · Responsive sizing · Accessibility · Handoff notes</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

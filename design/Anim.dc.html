@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Animation and haptic storyboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:22px 24px;box-sizing:border-box;display:flex;gap:28px;align-items:flex-start}
+.h2{font:700 20px/26px Sora,sans-serif;margin:0}
+.p{font:400 14px/20px Figtree,sans-serif;color:#4A4845;margin:0}
+.mono{font:500 12px/16px ui-monospace,Menlo,monospace;color:#5C5A57}
+.dl{display:grid;grid-template-columns:110px 1fr;gap:6px 14px}
+.dl dt{font:600 12px/18px Figtree;color:#5C5A57;letter-spacing:.04em;text-transform:uppercase}
+.dl dd{margin:0;font:400 14px/18px Figtree;color:#16161A}
+.fr{display:flex;flex-direction:column;gap:6px;align-items:center}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#D6EFEC;color:#0B5C86;font:600 12px/16px Figtree}
+</style>
+</helmet>
+<div style="width:2040px;height:3480px;box-sizing:border-box;padding:64px;background:#F6F3EE;color:#16161A;font-family:Figtree,sans-serif;display:flex;flex-direction:column;gap:20px">
+  <div style="margin-bottom:8px">
+    <div class="k">07 · Animation and haptic spec</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">Short, eased, and always explainable.</div>
+    <p class="p" style="margin-top:8px;font-size:16px;line-height:24px;max-width:900px">Durations come from the motion tokens. Haptics: light = selection tick (10ms), medium = impact (20ms), success = double tick rising, error = double tick falling. Reduced motion removes translation, shake, particles and scale; state still changes via a 120ms cross-fade, and the same haptic fires.</p>
+  </div>
+
+  <sc-for list="{{anims}}" as="a" hint-placeholder-count="6">
+    <div class="card">
+      <div style="width:830px;flex:none;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:10px;align-items:center"><h2 class="h2">{{a.name}}</h2><span class="tag">{{a.dur}}</span></div>
+        <p class="p"><strong>Trigger.</strong> {{a.trigger}}</p>
+        <dl class="dl" style="margin:4px 0 0">
+          <dt>Easing</dt><dd>{{a.ease}}</dd>
+          <dt>What moves</dt><dd>{{a.moves}}</dd>
+          <dt>Haptic</dt><dd>{{a.haptic}}</dd>
+          <dt>Reduced motion</dt><dd>{{a.rm}}</dd>
+        </dl>
+      </div>
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        <sc-for list="{{a.boards}}" as="f" hint-placeholder-count="3">
+          <div class="fr"><div style="transform:translateX({{f.dx}}px) scale({{f.sc}});transform-origin:center"><dc-import name="Board" scene="{{f.scene}}" size="150" theme="light" hint-size="150px,150px"></dc-import></div><span class="mono">{{f.t}}</span></div>
+        </sc-for>
+        <sc-for list="{{a.cells}}" as="f" hint-placeholder-count="3">
+          <div class="fr"><div style="padding:6px;background:#F6F3EE;border-radius:16px"><dc-import name="Cell" kind="{{f.kind}}" n="{{f.n}}" state="{{f.state}}" pair="{{f.pair}}" dir="{{f.dir}}" flags="{{f.flags}}" size="104" theme="light" hint-size="104px,104px"></dc-import></div><span class="mono">{{f.t}}</span></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2040,"height":3480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const b = (scene, t, dx, sc) => ({ scene, t, dx: dx || 0, sc: sc || 1 });
+    const c = (kind, state, t, o) => Object.assign({ kind, state, t, n: 0, pair: 1, dir: 'r', flags: '' }, o || {});
+    const anims = [
+      { name: 'Path extend', dur: '120ms', trigger: 'Finger crosses 35% into an adjacent, valid cell.', ease: 'ease-standard', moves: 'Stroke tail grows to the new cell centre; head cursor ring follows; active run brightens; gradient re-fits to the longer path.', haptic: 'Light, one tick per cell entered (throttled to 1 per 60ms).', rm: 'Stroke appears instantly, 80ms fade on the new segment. No cursor travel.', boards: [b('k5', '0ms'), b('k6', '60ms'), b('k7', '120ms')], cells: [] },
+      { name: 'Path retract and undo', dur: '180ms per step', trigger: 'Finger drags back onto the previous cell, or the Undo button is pressed.', ease: 'ease-standard; stagger 40ms per step on multi-undo', moves: 'Head end of the stroke shrinks one cell; cursor ring slides back; consumed burn cells do not un-burn.', haptic: 'Light on each step; medium on multi-undo of 3 or more.', rm: 'Segments removed with a 120ms fade; no sliding cursor.', boards: [b('mid', '0ms'), b('k7', '90ms'), b('k6', '180ms')], cells: [] },
+      { name: 'Node reached', dur: '260ms', trigger: 'Path head enters the next numbered node.', ease: 'spring-soft (damping 18, stiffness 220)', moves: 'Node fill sweeps from surface to accent; node scales 1 → 1.12 → 1; halo ring pulse stops; tracker dot fills.', haptic: 'Light plus a soft tick sound (D5, 40ms).', rm: 'Fill cross-fades in 120ms. No scale.', boards: [], cells: [c('node', 'next', '0ms · next', { n: 2 }), c('node', 'reached', '120ms · pop', { n: 2 }), c('node', 'reached', '260ms · settled', { n: 2 })] },
+      { name: 'Burn crossed', dur: '420ms', trigger: 'Path enters a burn cell; leaving it commits the burn.', ease: 'ease-decel for ignite, ease-accel for char', moves: 'Ignite: flame fills, glow rises to 35%. Ember: four sparks drift up 12px and fade. Char: tile darkens to charred, flame becomes dashed outline.', haptic: 'Medium on ignite, none on char.', rm: 'Three states cross-fade, no sparks.', boards: [], cells: [c('burn', 'idle', '0ms · idle'), c('burn', 'crossed', '160ms · burning'), c('burn', 'burned', '420ms · burned')] },
+      { name: 'Teleport', dur: '180 + 240ms', trigger: 'Path enters a teleport cell; exit portal is its pair.', ease: 'ease-accel in, ease-decel out', moves: 'Entry: ring fills and path head is sucked to the centre (scale 1 → 0.2). Warp bridge draws dashed in 120ms. Exit: ring bursts outward in two rings (r 38 → 46), head re-appears and cursor jumps.', haptic: 'Medium at the exit burst.', rm: 'Exit portal highlights with a 160ms fade; no suction or rings.', boards: [], cells: [c('tele', 'idle', '0ms · idle'), c('tele', 'entered', '180ms · entered'), c('tele', 'burst', '420ms · exit burst')] },
+      { name: 'Freeze', dur: '420ms + 260ms thaw', trigger: 'Path enters a freeze cell. Thaw after 3 further moves.', ease: 'ease-decel out, linear for thaw', moves: 'Dashed frost ring expands from the cell to r = 1.5 cells; each of the 8 neighbours gets frost overlay and lock corner, staggered 30ms clockwise. Thaw fades overlay over 260ms.', haptic: 'Medium on activation; light tick at thaw.', rm: 'Overlay fades in over 160ms; no ring.', boards: [], cells: [c('freeze', 'idle', '0ms · idle'), c('freeze', 'active', '200ms · ring'), c('empty', 'idle', '420ms · locked', { flags: 'locked' }), c('freeze', 'thaw', '+3 moves · thaw')] },
+      { name: 'Switch toggle', dur: '180ms + 260ms', trigger: 'Path enters a switch cell.', ease: 'ease-standard knob, spring-soft gates', moves: 'Knob slides left → right, track fills with switch tint. Dotted connectors flash once. Linked gates morph: bars slide into side stubs, staggered 40ms by distance.', haptic: 'Light click on knob arrival.', rm: 'Knob and gates swap with a 120ms cross-fade.', boards: [], cells: [c('switch', 'off', '0ms · off'), c('switch', 'on', '180ms · on'), c('gate', 'closed', '0ms · closed'), c('gate', 'open', '260ms · open')] },
+      { name: 'Bonus collected', dur: '120 + 400ms', trigger: 'Path crosses a bonus star.', ease: 'spring-soft pop, ease-accel fly', moves: 'Star scales 1 → 1.25, fills gold, three sparkles scatter, then flies in an arc to the HUD star counter while fading to 0.', haptic: 'Success, rising double tick.', rm: 'Star fills, counter increments with a fade. No fly or sparkles.', boards: [], cells: [c('bonus', 'idle', '0ms · idle'), c('bonus', 'collected', '120ms · pop'), c('bonus', 'collected', '520ms · in path', { flags: 'path' })] },
+      { name: 'Countdown tick and expire', dur: '180ms / 260ms', trigger: 'Each relevant move; reaches 0.', ease: 'ease-standard drain, ease-accel crack', moves: 'Ring arc drains by one fifth; numeral cross-fades. At 1 a danger halo pulses at 1.6s. At 0 the ring dashes, a crack draws across in 260ms and four shards fall 10px.', haptic: 'Light per tick. Error (falling double tick) on expire.', rm: 'Numeral and ring change instantly; expired state fades in.', boards: [], cells: [c('count', 'idle', '3', { n: 3 }), c('count', 'idle', '2', { n: 2 }), c('count', 'idle', '1 · warning', { n: 1 }), c('count', 'idle', '0 · expired', { n: 0 })] },
+      { name: 'Invalid move', dur: '260ms', trigger: 'Finger enters a dead, burned, frozen, wrong-direction or out-of-order cell.', ease: 'ease-standard, damped sine for shake', moves: 'Board shakes ±7px with decaying amplitude (0, −7, +7, −4, 0). Offending tile tints danger 20% with a 3px outline. Path retracts one step. Feedback line slides up 8px and fades in at 120ms.', haptic: 'Error, falling double tick (14ms + 24ms).', rm: 'No shake. Tile tint fades in 160ms; feedback text fades in. Haptic unchanged.', boards: [b('dir0', '0ms'), b('dir0', '50ms', -7), b('dir0', '110ms', 7), b('dir1', '260ms · retracted')], cells: [] },
+      { name: 'Level solved', dur: '900ms', trigger: 'Final node reached.', ease: 'linear travel, spring-soft lift', moves: '0 – 600ms: a bright pulse travels along the path from node 1 to the final node. 600 – 800ms: board lifts 4px with an accent glow at 18% and scales 1.02; numerals settle. 800 – 900ms: fade into Level Complete.', haptic: 'Success, plus a soft chord (C–G–C, 300ms).', rm: 'Path cross-fades to the completed colour; 200ms fade to Level Complete. No pulse, no lift.', boards: [b('near', '0ms · last move'), b('done', '300ms · pulse'), b('done', '600ms · settle', 0, 1.03)], cells: [] },
+      { name: 'Hint reveal', dur: '240ms stagger', trigger: 'Hint pressed with hints remaining.', ease: 'ease-decel', moves: 'The next 2 to 3 cells outline in a dashed accent frame, staggered 80ms; they pulse until the player moves.', haptic: 'Light.', rm: 'All cells outline at once with a 160ms fade.', boards: [b('fresh', '0ms'), b('hint', '240ms · cells outlined')], cells: [] },
+      { name: 'Transitions, press and modals', dur: '80 to 260ms', trigger: 'Navigation, button press, dialog open and close.', ease: 'ease-standard / ease-decel in / ease-accel out', moves: 'Button press: scale 0.97 in 80ms, back in 120ms. Screen change: shared axis, outgoing −24px fade, incoming +24px fade, 260ms. Modal enter: scale 0.96 → 1 and fade, 260ms, scrim to 40%; exit 180ms. Bottom sheet: translateY 100% → 0, 260ms.', haptic: 'None, except light on toggles and segmented controls.', rm: 'All become 120ms fades; no scale or translate.', boards: [], cells: [] }
+    ];
+    return { anims };
+  }
+}
+</script>
+</body>
+</html>

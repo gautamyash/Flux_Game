@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Copy and microcopy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;family=Noto+Sans+Devanagari:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:22px 24px;box-sizing:border-box;break-inside:avoid;margin-bottom:20px}
+.h2{font:700 18px/24px Sora,sans-serif;margin:0 0 10px}
+.p{font:400 14px/20px Figtree,sans-serif;color:#4A4845;margin:0}
+.r{display:flex;gap:14px;padding:7px 0;border-top:1px solid #EEE9E0}
+.r:first-of-type{border-top:0}
+.rk{width:130px;flex:none;font:600 12px/18px Figtree;color:#5C5A57}
+.rv{font:500 14px/20px Figtree;color:#16161A}
+</style>
+</helmet>
+<div style="width:2160px;height:2100px;box-sizing:border-box;padding:64px;background:#F6F3EE;color:#16161A;font-family:Figtree,sans-serif;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="k">12 · Copy and microcopy</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">Concise, calm, a little wry. Never patronising.</div>
+    <p class="p" style="margin-top:8px;font-size:16px;line-height:24px;max-width:900px">Rules: one sentence, say what happened and what to do, no exclamation marks, no “oops”, never blame the player. Strings stay under 32 characters where they sit on buttons so Hindi expansion fits.</p>
+  </div>
+  <div style="columns:3;column-gap:20px">
+    <sc-for list="{{sections}}" as="s" hint-placeholder-count="10">
+      <div class="card"><h2 class="h2">{{s.title}}</h2>
+        <sc-for list="{{s.rows}}" as="r" hint-placeholder-count="4"><div class="r"><div class="rk">{{r.k}}</div><div class="rv">{{r.v}}</div></div></sc-for>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2160,"height":2100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const R = (k, v) => ({ k, v });
+    const sections = [
+      { title: 'Brand', rows: [R('Tagline', 'Connect. Adapt. Solve.'), R('Descriptor', 'A calm path puzzle.'), R('Store line', 'Draw one line. The board changes as you go.')] },
+      { title: 'Onboarding', rows: [R('Card 1 title', 'Draw one path'), R('Card 1 body', 'Connect the numbers in order with a single unbroken line. Drag to draw, drag back to undo.'), R('Card 2 title', 'Cells that change the rules'), R('Card 2 body', 'Walls, arrows, flames, portals, frost and switches. Each one is introduced alone, the first time you meet it.'), R('Card 3 title', 'Calm by design'), R('Card 3 body', 'No timers unless you pick one. Undo is always free. Every blocked move tells you exactly why.'), R('Footnote', 'No account needed. Progress saves on this device.')] },
+      { title: 'Tutorial prompts', rows: [R('Start', 'Press on 1 and drag. Lift when you reach 3.'), R('Midway', 'Nice. Now drag right, then down, to reach 3.'), R('Done', 'That is the whole idea. The rest is detail.')] },
+      { title: 'Hint messages', rows: [R('Generic', 'Try heading toward 3 first.'), R('Mechanic', 'Pass the arrow, then step into the portal.'), R('Order', 'Reach 2 before 3. Nodes count in order.'), R('Last node', 'The last node is closer than it looks.'), R('Limit', 'No hints left on this level.'), R('Ad offer', 'Watch a short video for 1 hint. Optional.')] },
+      { title: 'Feedback line · invalid moves', rows: [R('Dead cell', 'That is a wall. Go around it.'), R('Wrong direction', 'Wrong direction. Exit must be →'), R('Burned cell', 'That cell has burned out. Pick another.'), R('Frozen cell', 'Frozen for 2 more moves.'), R('Wrong number order', 'Not yet. Reach 3 before 4.'), R('Out of moves', 'No moves left. Undo to try another route.'), R('Countdown expired', 'The countdown cell ran out. Undo to retry.'), R('Revisit cell', 'Each cell can be used once.')] },
+      { title: 'Feedback line · information', rows: [R('Fresh level', 'Drag from 1 to begin.'), R('Node reached', 'Node 2 reached. Next target: 3.'), R('Teleport', 'Teleport used. Exit opened at row 5, column 5.'), R('Burn warning', 'Burn cell will be lost once you leave it.'), R('Freeze', 'Frozen: 8 neighbours locked for 3 moves.'), R('Switch', 'Switch ON. 2 gates opened.'), R('Countdown', 'The countdown cell expires after your next move.'), R('Bonus', 'Bonus star collected.')] },
+      { title: 'Failure screens', rows: [R('Out of moves', 'Title “24 of 24 moves used”. Body “One node short. Your route was close.”'), R('Countdown', 'Title “The countdown ran out”. Body “The cell reached 0 before the path crossed it.”'), R('Trapped', 'Title “No valid move left”. Body “The head is boxed in by your own path and a wall.”'), R('Primary action', 'Undo 3 moves'), R('Secondary', 'Retry from start · Use a hint')] },
+      { title: 'Results', rows: [R('3 stars', 'Perfect path. Solved in the fewest possible moves.'), R('2 stars', 'Two stars. One shorter route exists.'), R('1 star', 'Solved. A tidier route is waiting.'), R('Next / retry', 'Next level · Retry · Share'), R('Unlock', 'New mechanic unlocked. Freeze cells.')] },
+      { title: 'Achievements', rows: [R('First Solve', 'Solve any level.'), R('Perfect Path', 'Solve a level in the fewest moves.'), R('No Hint', 'Solve 10 levels without a hint.'), R('Speed Solver', 'Solve 5 levels in under 30 seconds.'), R('Teleporter Master', 'Solve 25 levels with portals.'), R('Burn Survivor', 'Solve 20 levels with burn cells.'), R('Switch Master', 'Solve 20 levels with switches.'), R('Freeze Expert', 'Solve 20 levels with freeze cells.'), R('100 Levels', 'Solve 100 levels.'), R('Daily Streak', 'Play the daily puzzle 30 days in a row.'), R('Toast', 'Achievement unlocked. Perfect Path.')] },
+      { title: 'Empty and system states', rows: [R('No dailies', 'No dailies solved yet. Your first daily is waiting.'), R('No stars yet', 'Stars appear here once you solve a level.'), R('Offline', 'You are offline. All 64 levels still work. Daily needs a connection.'), R('Save error', 'Could not save progress. We will keep trying.'), R('Loading', 'Loading Chapter 4'), R('Restart', 'Restart this level? Stars and best time stay safe.'), R('Reset', 'Reset all progress? This cannot be undone.')] },
+      { title: 'Settings labels', rows: [R('Reduce motion', 'Fades instead of shakes and particles'), R('High-contrast board', 'Thicker outlines, stronger tints'), R('Larger numbers', 'Bigger numerals on nodes'), R('Pattern markers', 'Adds a pattern to every special cell'), R('Left-handed bar', 'Undo, Hint, Restart mirror to the left')] },
+      { title: 'Hindi expansion test', rows: [R('Continue', 'जारी रखें · +40% width'), R('Undo', 'पूर्ववत करें · +90%'), R('Hint', 'संकेत · +10%'), R('Restart', 'फिर से शुरू करें · +120%'), R('Next level', 'अगला स्तर · +10%'), R('Rule', 'Buttons use min-width and padding, never fixed width. Noto Sans Devanagari at 1.1 × line height.')] }
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

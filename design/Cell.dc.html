@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX Cell component</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes flux-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.pulse{animation:flux-pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none;opacity:.7}}
+</style>
+</helmet>
+<div style="width:{{size}}px;height:{{size}}px;position:relative;font-family:Sora,sans-serif">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{t.surface}}" stroke="{{t.grid}}" stroke-width="1.4" opacity="{{bgOp}}"/>
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{tint}}" opacity="{{tintOp}}"/>
+  </svg>
+
+  <sc-if value="{{isDead}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{t.dead}}"/>
+    <g stroke="{{t.deadLine}}" stroke-width="3.2" stroke-linecap="round" opacity="0.8">
+      <path d="M8 34 L34 8"/><path d="M8 62 L62 8"/><path d="M8 90 L90 8"/><path d="M38 92 L92 38"/><path d="M66 92 L92 66"/>
+    </g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{hasPlate}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="50" r="34" fill="{{t.raised}}" stroke="{{t.grid}}" stroke-width="1.5"/>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isDir}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <g transform="rotate({{rot}} 50 50)">
+      <path d="M12 3 H88 A9 9 0 0 1 97 12 V20 H3 V12 A9 9 0 0 1 12 3 Z" fill="{{t.dir}}" opacity="0.28"/>
+      <path d="M50 78 V30 M30 48 L50 28 L70 48" fill="none" stroke="{{t.dir}}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isBurn}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{t.char}}" opacity="{{charOp}}"/>
+    <g stroke="{{t.deadLine}}" stroke-width="3" stroke-linecap="round" opacity="{{charOp}}"><path d="M8 34 L34 8"/><path d="M8 62 L62 8"/><path d="M8 90 L90 8"/><path d="M38 92 L92 38"/><path d="M66 92 L92 66"/></g>
+    <circle cx="50" cy="56" r="38" fill="{{t.burn}}" opacity="{{glowOp}}"/>
+    <path d="M50 14 C56 28 72 38 72 58 C72 74 62 85 50 85 C38 85 28 74 28 58 C28 49 33 42 39 36 C39 45 43 49 47 50 C44 38 44 26 50 14 Z" fill="{{flameFill}}" stroke="{{flameStroke}}" stroke-width="6" stroke-linejoin="round" stroke-dasharray="{{flameDash}}"/>
+    <path d="M50 48 C54 56 61 60 61 69 C61 76 56 80 50 80 C44 80 39 76 39 69 C39 62 46 58 50 48 Z" fill="#FFE3B8" opacity="{{innerOp}}"/>
+    <g fill="{{t.burn}}" opacity="{{emberOp}}"><circle cx="24" cy="30" r="3"/><circle cx="78" cy="24" r="2.5"/><circle cx="82" cy="46" r="2"/><circle cx="20" cy="56" r="2"/></g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isTele}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="{{t.tele}}" stroke-width="2.4" opacity="{{burstOp}}"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="{{t.tele}}" stroke-width="3" opacity="{{burstOp}}"/>
+    <circle cx="50" cy="50" r="40" fill="none" stroke="{{t.tele}}" stroke-width="2.5" stroke-dasharray="3 6" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="50" cy="50" r="27" fill="{{t.tele}}" fill-opacity="{{teleFillOp}}" stroke="{{t.tele}}" stroke-width="6.5"/>
+    <circle cx="50" cy="50" r="8" fill="{{t.tele}}" opacity="{{dotOp}}"/>
+    <path d="M50 40 L59 58 H41 Z" fill="{{t.tele}}" stroke="{{t.tele}}" stroke-width="3" stroke-linejoin="round" opacity="{{triOp}}"/>
+    <rect x="42" y="42" width="16" height="16" rx="2.5" fill="{{t.tele}}" opacity="{{sqOp}}"/>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isFreeze}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="50" r="47" fill="none" stroke="{{t.freeze}}" stroke-width="2.4" stroke-dasharray="4 5" stroke-linecap="round" opacity="{{ringOp}}"/>
+    <circle cx="50" cy="50" r="36" fill="{{t.freeze}}" opacity="{{iceOp}}"/>
+    <g fill="none" stroke="{{t.freeze}}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 19 V81"/><path d="M50 19 V81" transform="rotate(60 50 50)"/><path d="M50 19 V81" transform="rotate(120 50 50)"/>
+      <g stroke-width="4"><path d="M43 27 L50 20 L57 27 M43 73 L50 80 L57 73"/><path d="M43 27 L50 20 L57 27 M43 73 L50 80 L57 73" transform="rotate(60 50 50)"/><path d="M43 27 L50 20 L57 27 M43 73 L50 80 L57 73" transform="rotate(120 50 50)"/></g>
+    </g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isSwitch}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="20" y="36" width="60" height="28" rx="14" fill="{{trackFill}}" stroke="{{t.sw}}" stroke-width="5"/>
+    <circle cx="{{knobX}}" cy="50" r="9" fill="{{knobFill}}" stroke="{{t.sw}}" stroke-width="4"/>
+    <text x="50" y="82" text-anchor="middle" font-family="Sora,sans-serif" font-weight="700" font-size="12" letter-spacing="1" fill="{{t.sw}}">{{swLabel}}</text>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isGate}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="13" y="13" width="74" height="74" rx="10" fill="{{t.gate}}" opacity="{{gateOp}}"/>
+    <g stroke="{{t.surface}}" stroke-width="5" stroke-linecap="round" opacity="{{gateOp}}"><path d="M34 24 V76"/><path d="M50 24 V76"/><path d="M66 24 V76"/></g>
+    <rect x="13" y="13" width="74" height="74" rx="10" fill="none" stroke="{{t.gate}}" stroke-width="3" stroke-dasharray="6 6" opacity="{{openOp}}"/>
+    <g stroke="{{t.gate}}" stroke-width="6" stroke-linecap="round" opacity="{{openOp}}"><path d="M13 36 V64"/><path d="M87 36 V64"/></g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isBonus}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="52" r="38" fill="{{t.bonus}}" opacity="0.16" class="{{bonusCls}}"/>
+    <path d="M50 17 L59 38 L81 40 L64.5 55 L69.5 77 L50 65.5 L30.5 77 L35.5 55 L19 40 L41 38 Z" fill="{{starFill}}" stroke="{{t.bonus}}" stroke-width="5.5" stroke-linejoin="round"/>
+    <g stroke="{{t.bonus}}" stroke-width="3.5" stroke-linecap="round" opacity="{{sparkOp}}"><path d="M18 20 V30 M13 25 H23"/><path d="M82 14 V22 M78 18 H86"/><path d="M84 74 V82 M80 78 H88"/></g>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isCount}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="50" r="43" fill="none" stroke="{{t.count}}" stroke-width="3" class="pulse" opacity="{{warnOp}}"/>
+    <circle cx="50" cy="50" r="31" fill="{{t.raised}}" stroke="{{t.grid}}" stroke-width="7" stroke-dasharray="{{ringBase}}"/>
+    <circle cx="50" cy="50" r="31" fill="none" stroke="{{t.count}}" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ringDash}}" transform="rotate(-90 50 50)" opacity="{{cRingOp}}"/>
+    <path d="M60 22 L53 38 L62 46 L49 60 L57 80" fill="none" stroke="{{t.text2}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="{{crackOp}}"/>
+    <text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="Sora,sans-serif" font-weight="700" font-size="30" fill="{{countText}}" style="font-variant-numeric:tabular-nums">{{n}}</text>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isNode}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <circle cx="50" cy="50" r="44" fill="none" stroke="{{t.accent}}" stroke-width="3.5" class="pulse" opacity="{{haloOp}}"/>
+    <circle cx="50" cy="50" r="42" fill="none" stroke="{{ringC}}" stroke-width="2.6" opacity="{{ringOpN}}"/>
+    <circle cx="50" cy="50" r="33" fill="{{nodeFill}}" stroke="{{nodeStroke}}" stroke-width="{{nodeSw}}" stroke-dasharray="{{nodeDash}}"/>
+    <text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="Sora,sans-serif" font-weight="700" font-size="{{nodeFs}}" fill="{{nodeText}}" style="font-variant-numeric:tabular-nums">{{n}}</text>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isLocked}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{t.freeze}}" opacity="0.30"/>
+    <g stroke="{{t.freeze}}" stroke-width="2.4" stroke-linecap="round" opacity="0.85"><path d="M12 30 L30 12"/><path d="M12 54 L54 12"/><path d="M12 78 L78 12"/><path d="M36 88 L88 36"/><path d="M60 88 L88 60"/></g>
+    <rect x="68" y="10" width="22" height="17" rx="4" fill="{{t.freeze}}"/>
+    <path d="M73 10 V7 A6 6 0 0 1 85 7 V10" fill="none" stroke="{{t.freeze}}" stroke-width="3.2" stroke-linecap="round" transform="translate(0 1)"/>
+    <circle cx="79" cy="18.5" r="2.4" fill="{{t.surface}}"/>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isErr}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible">
+    <rect x="3" y="3" width="94" height="94" rx="15" fill="{{t.danger}}" opacity="0.2" stroke="{{t.danger}}" stroke-width="3"/>
+  </svg>
+  </sc-if>
+
+  <sc-if value="{{isHint}}" hint-placeholder-val="{{ false }}">
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 100 100" style="position:absolute;left:0;top:0;overflow:visible" class="pulse">
+    <rect x="6" y="6" width="88" height="88" rx="14" fill="{{t.accent}}" fill-opacity="0.14" stroke="{{t.accent}}" stroke-width="3.5" stroke-dasharray="7 6" stroke-linecap="round"/>
+  </svg>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","default":"node","options":["empty","node","dead","dir","burn","tele","freeze","switch","gate","bonus","count"]},"state":{"editor":"text","default":"idle"},"n":{"editor":"int","default":1},"dir":{"editor":"enum","default":"r","options":["u","r","d","l"]},"pair":{"editor":"int","default":1},"size":{"editor":"int","default":96},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"bare":{"editor":"boolean","default":false},"flags":{"editor":"text","default":""},"skin":{"editor":"text","default":""},"$preview":{"width":96,"height":96}}'>
+class Component extends DCLogic {
+  pal(dark, skin) {
+    const L = {surface:'#FDFBF7',raised:'#FFFFFF',grid:'#DDD6CA',text:'#16161A',text2:'#5C5A57',accent:'#0B7F7A',accentSoft:'#D6EFEC',onAccent:'#FFFFFF',rampB:'#0B5C86',done:'#0E5E73',danger:'#C8372D',dead:'#D3CCBF',deadLine:'#8F897D',dir:'#4A56D6',burn:'#D9641A',tele:'#7A45D6',freeze:'#1E8FC9',sw:'#C42E75',gate:'#5B5750',bonus:'#B37A00',count:'#C8372D',char:'#3A3733'};
+    const D = {surface:'#1D1C19',raised:'#282621',grid:'#34312B',text:'#F2EEE6',text2:'#A9A397',accent:'#3FD1C4',accentSoft:'#123A37',onAccent:'#0A1F1E',rampB:'#6FA8F5',done:'#5FB4D8',danger:'#FF7468',dead:'#2A2823',deadLine:'#6E6A60',dir:'#8E98FF',burn:'#FF9A52',tele:'#B592FF',freeze:'#6CC7F5',sw:'#FF7DB0',gate:'#8B857A',bonus:'#FFC93D',count:'#FF7468',char:'#0B0A09'};
+    const S = {
+      graphite:{surface:'#2B2D31',raised:'#363A40',grid:'#3E4249',text:'#EEF0F2',text2:'#A8ADB5',accent:'#8FB0FF',accentSoft:'#26304A',onAccent:'#0E1526',done:'#A6B9FF',dead:'#222428',deadLine:'#6B7078',dir:'#9AA6FF',burn:'#FF9A52',tele:'#B592FF',freeze:'#6CC7F5',sw:'#FF7DB0',gate:'#8E939B',bonus:'#FFC93D',count:'#FF7468',char:'#0F1012',danger:'#FF7468'},
+      aurora:{surface:'#0F2A2E',raised:'#163A3F',grid:'#1F4A50',text:'#E6FBF7',text2:'#8FC9C4',accent:'#5EF0C2',accentSoft:'#12403F',onAccent:'#04201A',done:'#7FE3D6',dead:'#0A2023',deadLine:'#3E7A7C',dir:'#9AA6FF',burn:'#FF9A52',tele:'#B592FF',freeze:'#6CC7F5',sw:'#FF7DB0',gate:'#7FA7A8',bonus:'#FFC93D',count:'#FF7468',char:'#041012',danger:'#FF7468'},
+      ink:{surface:'#FAFAFA',raised:'#FFFFFF',grid:'#CFCFCF',text:'#111111',text2:'#555555',accent:'#111111',accentSoft:'#E4E4E4',onAccent:'#FFFFFF',done:'#111111',dead:'#D2D2D2',deadLine:'#777777',dir:'#3A44B8',burn:'#C4540F',tele:'#6A38C0',freeze:'#1573A8',sw:'#B02566',gate:'#444444',bonus:'#A87300',count:'#B3261E',char:'#222222',danger:'#B3261E'},
+      sand:{surface:'#FBF3E4',raised:'#FFF9EE',grid:'#D5C09A',text:'#2B2118',text2:'#6B5A45',accent:'#B4531F',accentSoft:'#F3D9C3',onAccent:'#FFFFFF',done:'#8A3A16',dead:'#E0CFAE',deadLine:'#A38C62',dir:'#4A56D6',burn:'#B4531F',tele:'#7A45D6',freeze:'#1E8FC9',sw:'#C42E75',gate:'#6B5A45',bonus:'#B07A00',count:'#B3261E',char:'#4A3B2B',danger:'#B3261E'},
+      hcl:{surface:'#FFFFFF',raised:'#FFFFFF',grid:'#111111',text:'#000000',text2:'#333333',accent:'#00574F',accentSoft:'#D8F2EF',onAccent:'#FFFFFF',done:'#0A3D62',dead:'#C9C9C9',deadLine:'#000000',dir:'#1F2BB0',burn:'#A63F00',tele:'#5A22B8',freeze:'#005F8F',sw:'#9E1456',gate:'#222222',bonus:'#855400',count:'#A3170E',char:'#111111',danger:'#A3170E'},
+      hcd:{surface:'#000000',raised:'#0A0A0A',grid:'#F2F2F2',text:'#FFFFFF',text2:'#D6D6D6',accent:'#5CF0E0',accentSoft:'#06302D',onAccent:'#000000',done:'#8CC8FF',dead:'#262626',deadLine:'#FFFFFF',dir:'#B3BBFF',burn:'#FFB070',tele:'#D0B4FF',freeze:'#8AD8FF',sw:'#FF9EC4',gate:'#CFCFCF',bonus:'#FFD65C',count:'#FF9088',char:'#1A1A1A',danger:'#FF9088'}
+    };
+    const base = Object.assign({}, dark ? D : L);
+    return S[skin] ? Object.assign(base, S[skin]) : base;
+  }
+  renderVals() {
+    const p = this.props;
+    const size = Number(p.size) || 96;
+    const t = this.pal(p.theme === 'dark', p.skin);
+    const kind = p.kind || 'node';
+    const st = p.state || 'idle';
+    const n = Number(p.n);
+    const pair = Number(p.pair) || 1;
+    const fl = ' ' + (p.flags || '') + ' ';
+    const has = (f) => fl.indexOf(' ' + f + ' ') >= 0;
+    const tints = { dir: [t.dir, 0.1], burn: [t.burn, 0.1], tele: [t.tele, 0.1], freeze: [t.freeze, 0.12], 'switch': [t.sw, 0.08], bonus: [t.bonus, 0.1], count: [t.count, 0.06] };
+    const tn = tints[kind] || [t.surface, 0];
+    const v = { t, size, n: Number.isFinite(n) ? n : 0 };
+    v.bgOp = p.bare ? 0 : 1;
+    v.tint = tn[0]; v.tintOp = tn[1];
+    v.isDead = kind === 'dead';
+    v.isDir = kind === 'dir';
+    v.isBurn = kind === 'burn';
+    v.isTele = kind === 'tele';
+    v.isFreeze = kind === 'freeze';
+    v.isSwitch = kind === 'switch';
+    v.isGate = kind === 'gate';
+    v.isBonus = kind === 'bonus';
+    v.isCount = kind === 'count';
+    v.isNode = kind === 'node';
+    v.hasPlate = has('path') && !v.isNode && !v.isDead && !v.isGate && kind !== 'empty';
+    v.isLocked = has('locked');
+    v.isErr = has('err');
+    v.isHint = has('hint');
+    // direction
+    v.rot = { u: 0, r: 90, d: 180, l: 270 }[p.dir || 'r'];
+    // burn
+    const burned = st === 'burned', crossed = st === 'crossed';
+    v.charOp = burned ? 1 : 0;
+    v.glowOp = crossed ? 0.35 : (burned ? 0 : 0.14);
+    v.flameFill = crossed ? t.burn : 'none';
+    v.flameStroke = burned ? t.deadLine : t.burn;
+    v.flameDash = burned ? '2 9' : '0';
+    v.innerOp = crossed ? 1 : 0;
+    v.emberOp = crossed ? 1 : 0;
+    // teleport
+    v.burstOp = st === 'burst' ? 0.7 : 0;
+    v.teleFillOp = st === 'entered' ? 0.35 : (st === 'burst' ? 0.18 : 0.06);
+    v.dotOp = pair === 1 ? 1 : 0; v.triOp = pair === 2 ? 1 : 0; v.sqOp = pair === 3 ? 1 : 0;
+    // freeze
+    v.ringOp = st === 'active' ? 0.9 : (st === 'thaw' ? 0.4 : 0);
+    v.iceOp = st === 'active' ? 0.22 : 0.08;
+    // switch
+    const on = st === 'on';
+    v.trackFill = on ? t.sw : 'none';
+    v.knobX = on ? 66 : 34;
+    v.knobFill = on ? '#FFFFFF' : t.raised;
+    v.swLabel = on ? 'ON' : 'OFF';
+    // gate
+    const open = st === 'open';
+    v.gateOp = open ? 0 : 1; v.openOp = open ? 1 : 0;
+    // bonus
+    const got = st === 'collected';
+    v.starFill = got ? t.bonus : 'none';
+    v.sparkOp = got ? 1 : 0;
+    v.bonusCls = got ? '' : 'pulse';
+    // countdown
+    const cv = Math.max(0, Math.min(5, v.n));
+    const C = 194.8;
+    v.ringBase = cv === 0 ? '4 7' : '0';
+    v.ringDash = (C * cv / 5).toFixed(1) + ' ' + C;
+    v.cRingOp = cv === 0 ? 0 : 1;
+    v.crackOp = cv === 0 ? 1 : 0;
+    v.warnOp = cv === 1 ? 0.8 : 0;
+    v.countText = cv === 0 ? t.dis || t.text2 : (cv === 1 ? t.count : t.text);
+    // node
+    let nodeFill = t.raised, nodeStroke = t.text, nodeText = t.text, nodeSw = 3.2, nodeDash = '0', haloOp = 0, ringC = t.text, ringOpN = 0;
+    if (st === 'next') { nodeFill = t.accentSoft; nodeStroke = t.accent; nodeText = t.text; haloOp = 1; nodeSw = 3.6; }
+    if (st === 'reached') { nodeFill = t.accent; nodeStroke = t.accent; nodeText = t.onAccent; }
+    if (st === 'final') { nodeFill = t.done; nodeStroke = t.done; nodeText = t.onAccent; ringC = t.done; ringOpN = 1; }
+    if (st === 'error') { nodeFill = t.raised; nodeStroke = t.danger; nodeText = t.danger; nodeSw = 4; }
+    if (has('locked')) { nodeStroke = t.freeze; nodeDash = '5 4'; }
+    if (has('start')) { ringOpN = 1; ringC = (st === 'reached' || st === 'final') ? t.accent : t.text; }
+    v.nodeFill = nodeFill; v.nodeStroke = nodeStroke; v.nodeText = nodeText; v.nodeSw = nodeSw; v.nodeDash = nodeDash;
+    v.haloOp = haloOp; v.ringC = ringC; v.ringOpN = ringOpN;
+    v.nodeFs = (v.n >= 10 ? 27 : 34) * (has('big') ? 1.18 : 1);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

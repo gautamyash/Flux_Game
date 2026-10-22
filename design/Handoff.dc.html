@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Handoff notes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:24px;box-sizing:border-box}
+.h2{font:700 22px/28px Sora,sans-serif;margin:0 0 10px}
+.p{font:400 14px/20px Figtree,sans-serif;color:#4A4845;margin:0}
+table{border-collapse:collapse;width:100%}
+th,td{font:500 13px/18px Figtree;text-align:left;padding:8px 10px;border-bottom:1px solid #EEE9E0;vertical-align:top}
+th{font-weight:700;color:#5C5A57;background:#FAF8F4}
+td.n{font:700 13px/18px Sora;white-space:nowrap}
+td.m{font:500 12px/18px ui-monospace,Menlo,monospace;color:#2E2C2A}
+.cd{font:500 12px/18px ui-monospace,Menlo,monospace;background:#16161A;color:#F2EEE6;border-radius:14px;padding:16px 18px;margin:0;white-space:pre-wrap}
+</style>
+</helmet>
+<div style="width:2240px;height:4300px;box-sizing:border-box;padding:64px;background:#F6F3EE;color:#16161A;font-family:Figtree,sans-serif;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="k">13 · Handoff notes for React Native</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">Everything an engineer needs, in one place.</div>
+    <p class="p" style="margin-top:8px;font-size:16px;line-height:24px;max-width:960px">Stack: React Native, Reanimated 3, react-native-gesture-handler, and either react-native-skia or react-native-svg for the board. All glyphs live on a 100 × 100 viewBox and scale to any cell size. All colours, radii and durations are the tokens on the tokens artboard.</p>
+  </div>
+
+  <div class="card">
+    <h2 class="h2">Components · props, variants, states</h2>
+    <table>
+      <tr><th style="width:170px">Component</th><th style="width:520px">Props</th><th style="width:360px">Variants</th><th>States</th><th style="width:300px">Sizing and spacing</th></tr>
+      <sc-for list="{{comps}}" as="c" hint-placeholder-count="12"><tr><td class="n">{{c.n}}</td><td class="m">{{c.p}}</td><td>{{c.v}}</td><td>{{c.s}}</td><td>{{c.z}}</td></tr></sc-for>
+    </table>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start">
+    <div class="card" style="flex:1">
+      <h2 class="h2">Sizing and spacing reference</h2>
+      <table>
+        <tr><th>Token</th><th>Value</th><th>Used for</th></tr>
+        <sc-for list="{{sizes}}" as="r" hint-placeholder-count="12"><tr><td class="n" style="font-size:12px">{{r.k}}</td><td class="m">{{r.v}}</td><td>{{r.u}}</td></tr></sc-for>
+      </table>
+    </div>
+    <div class="card" style="flex:1">
+      <h2 class="h2">Motion · durations and easings</h2>
+      <table>
+        <tr><th>Interaction</th><th>Duration</th><th>Easing</th><th>Haptic</th></tr>
+        <sc-for list="{{motion}}" as="r" hint-placeholder-count="12"><tr><td class="n" style="font-size:12px">{{r.k}}</td><td class="m">{{r.d}}</td><td class="m">{{r.e}}</td><td>{{r.h}}</td></tr></sc-for>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start">
+    <div class="card" style="flex:1">
+      <h2 class="h2">Asset list</h2>
+      <table>
+        <tr><th style="width:160px">Group</th><th>Items</th></tr>
+        <sc-for list="{{assets}}" as="r" hint-placeholder-count="8"><tr><td class="n" style="font-size:12px">{{r.k}}</td><td>{{r.v}}</td></tr></sc-for>
+      </table>
+    </div>
+    <div class="card" style="flex:1">
+      <h2 class="h2">Board implementation notes</h2>
+      <ul class="p" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+        <li><strong>Layers, back to front:</strong> plate, tiles, path (Skia Path, stroke width 0.34 × cell), cells and glyphs, head cursor. Cells never re-render when the path grows; only the path layer does.</li>
+        <li><strong>Path geometry:</strong> sample cell centres; for each interior point draw L to the previous edge midpoint, then a quadratic with the centre as control to the next edge midpoint. That is the half-cell smooth corner in every frame here.</li>
+        <li><strong>Progress ramp:</strong> one linear gradient from the first cell centre to the head, stops <code>path-active</code> to <code>path-ramp-end</code>. Re-fit on every extend. Solved board swaps to <code>path-completed</code>.</li>
+        <li><strong>Hit testing:</strong> compute cell from touch with <code>floor((x − pad) / cell)</code>, enter on 35% overlap past the shared edge, resolve diagonals to the dominant axis. Gesture Handler Pan on the board root, <code>runOnJS</code> only when the cell changes.</li>
+        <li><strong>Glyph states:</strong> each special cell is a pure function of <code>(kind, state, pair, flags)</code>; animate by interpolating opacity, dash offset and scale on shared values so state changes cross-fade.</li>
+        <li><strong>Teleport bridge:</strong> dashed quadratic between segment end and next segment start, control point offset 0.3 × distance perpendicular.</li>
+        <li><strong>Theme:</strong> a single <code>ThemeContext</code> exposing the token names. Board skins override <code>surface, raised, plate, grid, accent, ramp, special tints</code>. High contrast is a skin.</li>
+        <li><strong>Accessibility:</strong> expose cells as an accessibility grid, <code>accessibilityLabel</code> from the label table, <code>accessibilityActions</code> for extending the path, live region for announcements, <code>AccessibilityInfo.isReduceMotionEnabled</code> to switch every animation to its twin.</li>
+        <li><strong>Sizing:</strong> compute <code>boardSide</code> and <code>cellSize</code> exactly as on the responsive artboard; below 40dp wrap the board in a pan and pinch container.</li>
+      </ul>
+      <pre class="cd" style="margin-top:14px">const cell = Math.floor(Math.min(availW, availH, 760) / grid);
+const size = Math.max(cell, 40) * grid;           // pan + zoom if cell &lt; 40
+const pathW = 0.34 * cell;  const headR = 0.38 * cell;</pre>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2240,"height":4300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const C = (n, p, v, s, z) => ({ n, p, v, s, z });
+    const comps = [
+      C('Button', 'label, onPress, variant, size, leadingIcon?, disabled, loading', 'primary · secondary · ghost · destructive', 'default · pressed (scale .97, 80ms) · focus (3px ring) · disabled · loading', 'height 56 (48 compact), radius 16, padding-x 20, icon 20'),
+      C('IconButton', 'icon, onPress, accessibilityLabel, selected, disabled', 'standard · filled', 'default · pressed · selected · disabled', '48 × 48, radius 16, icon 24, stroke 1.9'),
+      C('TopBar', 'title, subtitle?, onBack, onMenu, rightSlot?', 'game · plain', 'default', 'height 56, padding-x 16, safe-top 44'),
+      C('BottomActionBar', 'actions[{icon,label,onPress,badge?,disabled}], leftHanded', '3-action (Undo, Hint, Restart)', 'default · action disabled · badge 0', 'buttons 56, radius 18, gap 24, bottom inset 24'),
+      C('ProgressIndicator', 'value 0..1, kind, tint, label?', 'linear · ring', 'determinate · indeterminate · complete', 'linear 8 high, ring 34 or 96, stroke 3.5 or 9'),
+      C('Modal / Sheet', 'visible, kind, title, body, actions[], onDismiss', 'dialog · bottom sheet', 'enter 260ms · visible · exit 180ms', 'dialog radius 28, padding 20, sheet radius 28 top, scrim 45%'),
+      C('Toast / FeedbackLine', 'tone, text, actionLabel?, onAction?', 'info · warn · error · hint · tele · ice', 'enter · visible · exit', 'min-height 44, radius 14, padding 8 × 14, dot 8'),
+      C('Switch', 'value, onValueChange, disabled', 'one size', 'off · on · disabled', '48 × 28, knob 22, radius 14'),
+      C('Slider', 'value, steps, onChange', 'stepped (3) for haptics', 'default · dragging · disabled', 'track 6, thumb 24'),
+      C('SegmentedControl', 'options[], selectedIndex, onChange', '2 to 4 options', 'selected · pressed · disabled', 'height 48 (inner 40), radius 14 / 11'),
+      C('ChapterCard', 'number, name, mechanics[], solved, total, state', 'grid card', 'complete · current · locked', '146 high, radius 20, padding 14, ring 34'),
+      C('LevelNode', 'level, state, stars 0..3', 'circle · challenge diamond', 'locked · available · current (halo) · completed · perfect', '56 circle, stars 12, diamond radius 14 rotated 45°'),
+      C('ModeCard', 'icon, name, rule, best, caption, state', 'list card', 'default · locked · coming soon', 'radius 20, icon tile 48, padding 12 × 14'),
+      C('StatCard', 'label, value, sub?', 'half-width', 'default', 'radius 20, padding 12 × 14'),
+      C('AchievementCard', 'name, description, icon or cell, progress, state', 'half-width', 'unlocked · in progress · locked', '122 high, radius 20, bar 5'),
+      C('ThemeCard', 'skin, name, caption, state', 'single board · light-dark pair', 'selected · default · locked', 'board 136 or 2 × 68, radius 20'),
+      C('GameResultCard', 'thumbnail, stars, moves, time, shareable', 'in-app · export 1080 × 1080', 'default · new best', 'radius 28, 6 × 6 pixel grid, gap 5'),
+      C('Board', 'grid, cells[], segments[], size, skin, theme, hints[], locked[], error?, big?', 'grid 3 to 10', 'idle · active · solved · shake · fallback pan', 'cell = floor(side / grid), plate pad 2.2%'),
+      C('NumberNode', 'n, state, start?, locked?, big?', 'single, 2-digit (× 0.8)', 'default · next (pulse) · reached · final · locked · error', 'disc r .33 × cell, ring r .42, numeral 34 / 27 of 100'),
+      C('EmptyCell', 'flags: path, locked, hint, err', '–', 'default · on path · locked · hint · error', 'tile inset 3%, radius .15 × cell'),
+      C('BlockedCell', '–', '–', 'single', 'hatch 3.2 of 100, 5 diagonals'),
+      C('DirectionCell', 'dir u r d l, err?', '4 directions', 'idle · error', 'chevron stroke 8, edge band 17 of 100'),
+      C('BurnCell', 'state', '–', 'idle · crossed · burned', 'flame stroke 6, glow r 38'),
+      C('TeleportCell', 'pair 1..3, state', 'dot · triangle · square', 'idle · entered · exit burst', 'ring r 27 stroke 6.5, outer dashed r 40'),
+      C('FreezeCell', 'state', '–', 'idle · active · thaw; neighbours get locked overlay', 'crystal 3 axes stroke 5, ring r 47'),
+      C('SwitchCell', 'state', '–', 'off · on', 'track 60 × 28, knob r 9'),
+      C('GateCell', 'state', '–', 'closed · open', 'block 74 of 100, 3 bars'),
+      C('BonusCell', 'state', '–', 'idle (pulse) · collected', 'star stroke 5.5, halo r 38'),
+      C('CountdownCell', 'n 0..5', '–', '5 · 4 · 3 · 2 · 1 (warning pulse) · 0 (cracked)', 'ring r 31 stroke 7, numeral 30')
+    ];
+    const sizes = [
+      { k: 'spacing', v: '4 8 12 16 20 24 32 40 48 64', u: 'All padding and gaps' }, { k: 'radius', v: 'cell .15× · chip 12 · button 16 · card 20 · modal 28 · pill 999', u: 'Corner scale' },
+      { k: 'elevation', v: 'e1 0 8 22 10% · e2 0 16 40 16% · e3 0 24 60 24%', u: 'Board, sheet, modal' }, { k: 'path width', v: '0.34 × cell', u: 'Stroke' },
+      { k: 'path highlight', v: '0.10 × cell, white 26%', u: 'Inner highlight' }, { k: 'head ring', v: 'r 0.38 × cell, stroke 0.06', u: 'Cursor' },
+      { k: 'min cell', v: '40dp', u: 'Below this the board pans and zooms' }, { k: 'max board', v: '760dp', u: 'Tablets' },
+      { k: 'touch target', v: '≥ 48dp, gap ≥ 8dp', u: 'All controls' }, { k: 'icon', v: '16 · 20 · 24 · 32, stroke 1.9', u: 'UI icons' },
+      { k: 'type', v: 'Display 44/48 · H1 32/38 · H2 24/30 · Title 18/24 · Body 16/24 · Small 14/20 · Caption 12/16', u: 'Sora / Figtree' }, { k: 'node numerals', v: '20 / 26 / 34 by cell size, × 0.8 for 2 digits', u: 'Tabular figures' }
+    ];
+    const motion = [
+      { k: 'Path extend', d: '120ms', e: 'ease-standard', h: 'light' }, { k: 'Retract / undo', d: '180ms, 40ms stagger', e: 'ease-standard', h: 'light / medium' },
+      { k: 'Node reached', d: '260ms', e: 'spring-soft', h: 'light' }, { k: 'Burn', d: '420ms', e: 'decel then accel', h: 'medium' },
+      { k: 'Teleport', d: '180 + 240ms', e: 'accel then decel', h: 'medium' }, { k: 'Freeze / thaw', d: '420 / 260ms', e: 'decel / linear', h: 'medium / light' },
+      { k: 'Switch / gates', d: '180 + 260ms', e: 'standard / spring-soft', h: 'light' }, { k: 'Bonus', d: '120 + 400ms', e: 'spring-soft / accel', h: 'success' },
+      { k: 'Countdown tick / expire', d: '180 / 260ms', e: 'standard / accel', h: 'light / error' }, { k: 'Invalid move', d: '260ms', e: 'damped sine', h: 'error' },
+      { k: 'Level solved', d: '900ms', e: 'linear + spring-soft', h: 'success' }, { k: 'Button press', d: '80ms in, 120ms out', e: 'standard', h: 'none' },
+      { k: 'Screen / modal', d: '260ms in, 180ms out', e: 'decel / accel', h: 'none' }, { k: 'Reduced motion', d: '120ms fade', e: 'linear', h: 'unchanged' }
+    ];
+    const assets = [
+      { k: 'Special-cell glyphs', v: 'dead hatch, direction chevron ×4, burn flame ×3 states, portal ring with dot / triangle / square, freeze crystal, switch toggle, gate bars, bonus star, countdown ring with crack, frost overlay + lock corner (all 100 × 100 SVG)' },
+      { k: 'Node', v: 'disc, origin ring, pulse halo, final ring, error and frozen variants' }, { k: 'UI icons (24 px)', v: 'back, close, sliders, grid, calendar, bolt, flame, play, lock, check, star, undo, bulb, restart, share, sound, music, vibrate, moon, eye, info, wifi-off, chevron-right' },
+      { k: 'Logo', v: 'F mark (64 viewBox), wordmark (Sora 700, tracking .06em), adaptive icon foreground + background, themed monochrome layer, splash path animation' },
+      { k: 'Fonts', v: 'Sora 500 / 600 / 700, Figtree 400 / 500 / 600 / 700, Noto Sans Devanagari 500 / 700 (fallback)' }, { k: 'Skins', v: 'Paper (light + dark), Graphite, Aurora, Ink, Sand, High contrast light and dark' },
+      { k: 'Sound', v: 'node tick, burn, portal, frost, switch click, bonus chime, solve chord, error thud (all under 400ms, ducked by system volume)' }, { k: 'Haptics', v: 'light 10ms, medium 20ms, success (rising double), error (falling double)' }
+    ];
+    return { comps, sizes, motion, assets };
+  }
+}
+</script>
+</body>
+</html>

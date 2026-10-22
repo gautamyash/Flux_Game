@@ -1,0 +1,300 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Anim.dc.html": {
+      "h": 3480,
+      "title": "07 Animation and haptics",
+      "w": 2040,
+      "x": 4220,
+      "y": 2960
+    },
+    "Board.dc.html": {
+      "h": 358,
+      "title": "Component: Board",
+      "w": 358,
+      "x": 176,
+      "y": 16360
+    },
+    "Cell.dc.html": {
+      "h": 96,
+      "title": "Component: Cell",
+      "w": 96,
+      "x": 0,
+      "y": 16360
+    },
+    "Game.dc.html": {
+      "h": 844,
+      "title": "Component: Game screen",
+      "w": 390,
+      "x": 614,
+      "y": 16360
+    },
+    "GameA.dc.html": {
+      "h": 1180,
+      "title": "06 Game frames 1-5",
+      "w": 2270,
+      "x": 0,
+      "y": 6740
+    },
+    "GameB.dc.html": {
+      "h": 1180,
+      "title": "06 Game frames 6-10",
+      "w": 2270,
+      "x": 2350,
+      "y": 6740
+    },
+    "GameDark.dc.html": {
+      "h": 1180,
+      "title": "06 Game frames dark",
+      "w": 2270,
+      "x": 4700,
+      "y": 6740
+    },
+    "GameModes.dc.html": {
+      "h": 2420,
+      "title": "06b HUD variants and hints",
+      "w": 1920,
+      "x": 7050,
+      "y": 6740
+    },
+    "Legend.dc.html": {
+      "h": 2300,
+      "title": "04 Special cell legend",
+      "w": 1960,
+      "x": 0,
+      "y": 2960
+    },
+    "Logo.dc.html": {
+      "h": 1560,
+      "title": "03 Logo and icon",
+      "w": 1600,
+      "x": 3280,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 1240,
+      "title": "00 Principles",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Path.dc.html": {
+      "h": 2060,
+      "title": "05 Board and path",
+      "w": 2100,
+      "x": 2040,
+      "y": 2960
+    },
+    "ScreensA.dc.html": {
+      "h": 844,
+      "title": "Component: Screens A",
+      "w": 390,
+      "x": 1084,
+      "y": 16360
+    },
+    "ScreensB.dc.html": {
+      "h": 844,
+      "title": "Component: Screens B",
+      "w": 390,
+      "x": 1554,
+      "y": 16360
+    },
+    "ScreensC.dc.html": {
+      "h": 844,
+      "title": "Component: Screens C",
+      "w": 390,
+      "x": 2024,
+      "y": 16360
+    },
+    "SheetA1.dc.html": {
+      "h": 3340,
+      "title": "08 Splash, onboarding, home",
+      "w": 2240,
+      "x": 0,
+      "y": 9700
+    },
+    "SheetA2.dc.html": {
+      "h": 2420,
+      "title": "08 Chapters and levels",
+      "w": 2240,
+      "x": 2320,
+      "y": 9700
+    },
+    "SheetB1.dc.html": {
+      "h": 2420,
+      "title": "08 Pause, complete, share, daily",
+      "w": 2240,
+      "x": 4640,
+      "y": 9700
+    },
+    "SheetB2.dc.html": {
+      "h": 2420,
+      "title": "08 Failed, daily done, modes",
+      "w": 2240,
+      "x": 6960,
+      "y": 9700
+    },
+    "SheetC1.dc.html": {
+      "h": 2420,
+      "title": "08 Guide, stats, achievements",
+      "w": 2240,
+      "x": 0,
+      "y": 13400
+    },
+    "SheetC2.dc.html": {
+      "h": 2420,
+      "title": "08 Settings, themes, hints",
+      "w": 2240,
+      "x": 2320,
+      "y": 13400
+    },
+    "SheetC3.dc.html": {
+      "h": 2420,
+      "title": "08 Utility states",
+      "w": 2240,
+      "x": 4640,
+      "y": 13400
+    },
+    "Tokens.dc.html": {
+      "h": 2480,
+      "title": "02 Design tokens",
+      "w": 1680,
+      "x": 1520,
+      "y": 0
+    },
+    "Responsive.dc.html": {
+      "x": 0,
+      "y": 19000,
+      "w": 2300,
+      "h": 4880,
+      "title": "10 Responsive and board sizing"
+    },
+    "Components.dc.html": {
+      "x": 2420,
+      "y": 19000,
+      "w": 2260,
+      "h": 2900,
+      "title": "09 Component library"
+    },
+    "A11y.dc.html": {
+      "x": 4800,
+      "y": 19000,
+      "w": 2200,
+      "h": 3300,
+      "title": "11 Accessibility"
+    },
+    "Copy.dc.html": {
+      "x": 0,
+      "y": 24200,
+      "w": 2160,
+      "h": 2100,
+      "title": "12 Copy and microcopy"
+    },
+    "Handoff.dc.html": {
+      "x": 2280,
+      "y": 24200,
+      "w": 2240,
+      "h": 4300,
+      "title": "13 React Native handoff"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-03T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "n0": {
+      "kind": "title1",
+      "maxW": 4880,
+      "text": "Foundations",
+      "w": 240,
+      "x": 0,
+      "y": -280
+    },
+    "n1": {
+      "kind": "title1",
+      "maxW": 6260,
+      "text": "Cells, path and motion",
+      "w": 240,
+      "x": 0,
+      "y": 2700
+    },
+    "n2": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Game screen",
+      "w": 240,
+      "x": 0,
+      "y": 6480
+    },
+    "n3": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "All screens, light then dark",
+      "w": 240,
+      "x": 0,
+      "y": 9440
+    },
+    "n4": {
+      "kind": "title1",
+      "maxW": 6880,
+      "text": "All screens, continued",
+      "w": 240,
+      "x": 0,
+      "y": 13140
+    },
+    "n5": {
+      "kind": "title1",
+      "maxW": 2414,
+      "text": "Components (source of truth for boards and screens)",
+      "w": 240,
+      "x": 0,
+      "y": 16100
+    },
+    "n6": {
+      "kind": "title1",
+      "maxW": 7000,
+      "text": "System sheets: responsive, components, accessibility, copy, handoff",
+      "w": 240,
+      "x": 0,
+      "y": 18720
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Tokens.dc.html",
+    "Logo.dc.html",
+    "Legend.dc.html",
+    "Path.dc.html",
+    "Anim.dc.html",
+    "GameA.dc.html",
+    "GameB.dc.html",
+    "GameDark.dc.html",
+    "GameModes.dc.html",
+    "SheetA1.dc.html",
+    "SheetA2.dc.html",
+    "SheetB1.dc.html",
+    "SheetB2.dc.html",
+    "SheetC1.dc.html",
+    "SheetC2.dc.html",
+    "SheetC3.dc.html",
+    "Cell.dc.html",
+    "Board.dc.html",
+    "Game.dc.html",
+    "ScreensA.dc.html",
+    "ScreensB.dc.html",
+    "ScreensC.dc.html",
+    "Responsive.dc.html",
+    "Components.dc.html",
+    "A11y.dc.html",
+    "Copy.dc.html",
+    "Handoff.dc.html"
+  ],
+  "pages": [],
+  "title": "FLUX"
+}

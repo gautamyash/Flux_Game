@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX Board component</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes flux-shake{0%,18%,100%{transform:translateX(0)}3%{transform:translateX(-7px)}6%{transform:translateX(7px)}9%{transform:translateX(-5px)}12%{transform:translateX(5px)}15%{transform:translateX(-2px)}}
+.shake{animation:flux-shake 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+</style>
+</helmet>
+<div class="{{rootCls}}" style="width:{{size}}px;height:{{size}}px;position:relative;border-radius:{{radius}}px;background:{{t.plate}};box-shadow:inset 0 0 0 1px {{t.grid}},{{shadow}};font-family:Sora,sans-serif">
+  <div style="position:absolute;left:0;top:0;width:{{size}}px;height:{{size}}px">
+    <sc-for list="{{tiles}}" as="tl" hint-placeholder-count="36">
+      <div style="position:absolute;left:{{tl.x}}px;top:{{tl.y}}px;width:{{tl.s}}px;height:{{tl.s}}px;border-radius:{{tl.r}}px;background:{{t.surface}};box-shadow:inset 0 0 0 1px {{t.grid}}"></div>
+    </sc-for>
+  </div>
+
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 {{size}} {{size}}" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
+    <defs>
+      <linearGradient id="{{gid}}" gradientUnits="userSpaceOnUse" x1="{{g.x1}}" y1="{{g.y1}}" x2="{{g.x2}}" y2="{{g.y2}}">
+        <stop offset="0" stop-color="{{g.a}}"/>
+        <stop offset="1" stop-color="{{g.b}}"/>
+      </linearGradient>
+    </defs>
+    <path d="{{linkD}}" fill="none" stroke="{{t.sw}}" stroke-width="{{linkW}}" stroke-dasharray="{{linkDash}}" stroke-linecap="round" opacity="0.7"/>
+    <path d="{{d1}}" fill="none" stroke="url(#{{gid}})" stroke-width="{{sw}}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="{{d2}}" fill="none" stroke="url(#{{gid}})" stroke-width="{{sw}}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="{{d3}}" fill="none" stroke="url(#{{gid}})" stroke-width="{{sw}}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="{{dAct}}" fill="none" stroke="{{t.accent}}" stroke-opacity="0.22" stroke-width="{{swHalo}}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="{{dAct}}" fill="none" stroke="{{actCol}}" stroke-width="{{sw}}" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.26" stroke-width="{{swHi}}" stroke-linecap="round" stroke-linejoin="round">
+      <path d="{{d1}}"/><path d="{{d2}}"/><path d="{{d3}}"/><path d="{{dAct}}"/>
+    </g>
+    <path d="{{bridge}}" fill="none" stroke="{{t.tele}}" stroke-width="{{bridgeW}}" stroke-dasharray="{{bridgeDash}}" stroke-linecap="round"/>
+  </svg>
+
+  <div style="position:absolute;left:0;top:0;width:{{size}}px;height:{{size}}px">
+    <sc-for list="{{cells}}" as="c" hint-placeholder-count="36">
+      <div style="position:absolute;left:{{c.x}}px;top:{{c.y}}px;width:{{c.s}}px;height:{{c.s}}px">
+        <dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" size="{{c.s}}" theme="{{theme}}" skin="{{skin}}" bare="{{true}}" flags="{{c.flags}}" hint-size="60px,60px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+  <svg width="{{size}}" height="{{size}}" viewBox="0 0 {{size}} {{size}}" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
+    <circle cx="{{cur.x}}" cy="{{cur.y}}" r="{{cur.r}}" fill="none" stroke="{{t.raised}}" stroke-width="{{cur.w1}}" opacity="{{cur.op}}"/>
+    <circle cx="{{cur.x}}" cy="{{cur.y}}" r="{{cur.r}}" fill="none" stroke="{{t.accent}}" stroke-width="{{cur.w2}}" opacity="{{cur.op}}"/>
+  </svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","default":"fresh","options":["fresh","mid","tele","burn","freeze","switch","count","dir","near","done","dense","hint","tut","mini","trap"]},"size":{"editor":"int","default":358},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"skin":{"editor":"text","default":""},"big":{"editor":"boolean","default":false},"$preview":{"width":358,"height":358}}'>
+class Component extends DCLogic {
+  pal(dark, skin) {
+    const L = {surface:'#FDFBF7',raised:'#FFFFFF',plate:'#E9E3D8',grid:'#DDD6CA',accent:'#0B7F7A',rampA:'#1BA39A',rampB:'#0B5C86',done:'#0E5E73',tele:'#7A45D6',sw:'#C42E75'};
+    const D = {surface:'#1D1C19',raised:'#282621',plate:'#0E0D0C',grid:'#34312B',accent:'#3FD1C4',rampA:'#3FD1C4',rampB:'#6FA8F5',done:'#5FB4D8',tele:'#B592FF',sw:'#FF7DB0'};
+    const S = {
+      graphite:{surface:'#2B2D31',raised:'#363A40',plate:'#1A1B1E',grid:'#3E4249',accent:'#8FB0FF',rampA:'#8FB0FF',rampB:'#C3A6FF',done:'#A6B9FF',tele:'#B592FF',sw:'#FF7DB0'},
+      aurora:{surface:'#0F2A2E',raised:'#163A3F',plate:'#081B1E',grid:'#1F4A50',accent:'#5EF0C2',rampA:'#5EF0C2',rampB:'#6C8CFF',done:'#7FE3D6',tele:'#B592FF',sw:'#FF7DB0'},
+      ink:{surface:'#FAFAFA',raised:'#FFFFFF',plate:'#161616',grid:'#CFCFCF',accent:'#111111',rampA:'#555555',rampB:'#111111',done:'#111111',tele:'#6A38C0',sw:'#B02566'},
+      sand:{surface:'#FBF3E4',raised:'#FFF9EE',plate:'#E6D5B6',grid:'#D5C09A',accent:'#B4531F',rampA:'#D17A3A',rampB:'#8A3A16',done:'#8A3A16',tele:'#7A45D6',sw:'#C42E75'},
+      hcl:{surface:'#FFFFFF',raised:'#FFFFFF',plate:'#111111',grid:'#111111',accent:'#00574F',rampA:'#00796F',rampB:'#0A3D62',done:'#0A3D62',tele:'#5A22B8',sw:'#9E1456'},
+      hcd:{surface:'#000000',raised:'#0A0A0A',plate:'#F2F2F2',grid:'#F2F2F2',accent:'#5CF0E0',rampA:'#5CF0E0',rampB:'#8CC8FF',done:'#8CC8FF',tele:'#D0B4FF',sw:'#FF9EC4'}
+    };
+    const b = Object.assign({}, dark ? D : L);
+    return S[skin] ? Object.assign(b, S[skin]) : b;
+  }
+  scenes() {
+    const A = ['1 . . # . 3', '. > . . B .', '. . T1 . . *', '# . . 2 . .', '. . 4 . T1 .', '. . . . . 5'];
+    const NEAR = ['1 . . *c . .', '. . . . . 2', '. # . . . .', '. . . . 3 .', '. . . 4 . *', '5 . . . . .'];
+    const NP = '00 01 02 03 04 05 15 25 24 23 22 32 33 34 44 43 53 52 51';
+    return {
+      fresh: { g: A },
+      mid: { g: A, segs: ['00 10 11 12 13 23 33 34'], act: 3 },
+      k7: { g: A, segs: ['00 10 11 12 13 23 33'], act: 2 },
+      k6: { g: A, segs: ['00 10 11 12 13 23'], act: 2 },
+      k5: { g: A, segs: ['00 10 11 12 13'], act: 2 },
+      dir1: { g: ['1 > . . . 4', '. . . v . .', '. # . . 2 .', '. . 3 . . .', '. . . # . .', '5 . . . . .'], segs: ['00'], act: 0 },
+      dir0: { g: ['1 > . . . 4', '. . . v . .', '. # . . 2 .', '. . 3 . . .', '. . . # . .', '5 . . . . .'], segs: ['00 01'], act: 2, err: '11' },
+      tele: { g: ['1 . . . . .', '. > . . # .', '. . T1e . . 2', '. # . . . .', '. . . . T1x .', '3 . . . . 4'], segs: ['00 10 11 12 22', '44 45 35 25'], act: 3 },
+      burn: { g: ['1 . . . . .', '. Bb Bx . # .', '. . 2 . . .', '. B . . . 3', '. . . # . .', '5 . . . . 4'], segs: ['00 10 11 12'], act: 2 },
+      freeze: { g: ['1 . . . . .', '. . . Fa . .', '. # . . 2 .', '. . . . . .', '. . 5 . 3 .', '4 . . . . .'], segs: ['00 01 11 12 13'], act: 2, locked: '02 03 04 12 14 22 23 24' },
+      'switch': { g: ['1 . . . . 3', '. . S1 . . .', '# G1 . G1 . .', '. . 2 . . .', '. . . . # .', '. . 5 . . 4'], segs: ['00 01 11 12 13 23 33 32'], act: 3, links: '12>21 12>23' },
+      count: { g: ['1 . . . . .', '. C1 . . # .', '. . 2 . . C3', '. C0 . . . .', '# . . 3 . .', '. . . . . 4'], segs: ['00 10 20 21 22'], act: 2 },
+      dir: { g: ['1 > . . . 4', '. . . v . .', '. # . . 2 .', '. . 3 . . .', '. . . # . .', '5 . . . . .'], segs: ['00 01'], act: 2, err: '11', shake: true },
+      near: { g: NEAR, segs: [NP], act: 3 },
+      done: { g: NEAR, segs: [NP + ' 50'], done: true },
+      dense: { g: ['1 . . # . . F .', '. > . . . B . .', '. . T1 . S0 . . 3', '# . . G0 . . C3 .', '. 2 . . . T2 . .', '. . C2 . . . < .', '* . . T1 . # . 4', '. . T2 . . * . 5'], segs: ['00 10 20 21 31 41'], act: 2, links: '24>33' },
+      hint: { g: A, segs: ['00 10'], act: 2, hint: '11 12 22' },
+      tut: { g: ['1 . .', '. 2 .', '. . 3'], segs: ['00 01 11'], act: 2 },
+      tut0: { g: ['1 . .', '. 2 .', '. . 3'] },
+      tut3: { g: ['1 . .', '. 2 .', '. . 3'], segs: ['00 01 11 12 22'], done: true },
+      tp0: { g: ['1 T1 . .', '. . . .', '. . . .', '. . T1 2'], segs: ['00'], act: 0 },
+      tp1: { g: ['1 T1e . .', '. . . .', '. . . .', '. . T1 2'], segs: ['00 01'], act: 2 },
+      tp2: { g: ['1 T1e . .', '. . . .', '. . . .', '. . T1x 2'], segs: ['00 01', '32 33'], act: 2 },
+      mini: { g: ['1 . . # 3', '. > . . .', '. . 2 . .', '# . . B .', '. . 4 . 5'], segs: ['00 10 11 12 22'], act: 0 },
+      trap: { g: ['1 . . 3', '. . . .', '# . 2 .', '. . . .'], segs: ['00 01 11 10'], act: 0 }
+    };
+  }
+  tok(s) {
+    if (/^\d+$/.test(s)) return { kind: 'node', n: +s };
+    let m;
+    if (s === '.') return { kind: 'empty' };
+    if (s === '#') return { kind: 'dead' };
+    if (s === '^') return { kind: 'dir', dir: 'u' };
+    if (s === '>') return { kind: 'dir', dir: 'r' };
+    if (s === 'v') return { kind: 'dir', dir: 'd' };
+    if (s === '<') return { kind: 'dir', dir: 'l' };
+    if (s === 'B') return { kind: 'burn', state: 'idle' };
+    if (s === 'Bx') return { kind: 'burn', state: 'crossed' };
+    if (s === 'Bb') return { kind: 'burn', state: 'burned' };
+    if ((m = /^T(\d)([ex]?)$/.exec(s))) return { kind: 'tele', pair: +m[1], state: m[2] === 'e' ? 'entered' : (m[2] === 'x' ? 'burst' : 'idle') };
+    if (s === 'F') return { kind: 'freeze', state: 'idle' };
+    if (s === 'Fa') return { kind: 'freeze', state: 'active' };
+    if (s === 'Ft') return { kind: 'freeze', state: 'thaw' };
+    if (s === 'S0') return { kind: 'switch', state: 'off' };
+    if (s === 'S1') return { kind: 'switch', state: 'on' };
+    if (s === 'G0') return { kind: 'gate', state: 'closed' };
+    if (s === 'G1') return { kind: 'gate', state: 'open' };
+    if (s === '*') return { kind: 'bonus', state: 'idle' };
+    if (s === '*c') return { kind: 'bonus', state: 'collected' };
+    if ((m = /^C(\d)$/.exec(s))) return { kind: 'count', n: +m[1] };
+    return { kind: 'empty' };
+  }
+  smooth(pts) {
+    if (pts.length < 2) return '';
+    const f = (v) => v.toFixed(1);
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    let d = 'M' + f(pts[0].x) + ' ' + f(pts[0].y);
+    if (pts.length === 2) return d + ' L' + f(pts[1].x) + ' ' + f(pts[1].y);
+    let m = mid(pts[0], pts[1]);
+    d += ' L' + f(m.x) + ' ' + f(m.y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const m2 = mid(pts[i], pts[i + 1]);
+      d += ' Q' + f(pts[i].x) + ' ' + f(pts[i].y) + ' ' + f(m2.x) + ' ' + f(m2.y);
+    }
+    const e = pts[pts.length - 1];
+    return d + ' L' + f(e.x) + ' ' + f(e.y);
+  }
+  renderVals() {
+    const p = this.props;
+    const size = Number(p.size) || 358;
+    const dark = p.theme === 'dark';
+    const skin = p.skin || '';
+    const t = this.pal(dark, skin);
+    const sc = this.scenes()[p.scene || 'fresh'] || this.scenes().fresh;
+    const rows = sc.g.map((r) => r.trim().split(/\s+/));
+    const n = rows.length;
+    const pad = Math.round(size * 0.022);
+    const cs = (size - 2 * pad) / n;
+    const ctr = (r, c) => ({ x: pad + c * cs + cs / 2, y: pad + r * cs + cs / 2 });
+    const segs = (sc.segs || []).map((s) => s.trim().split(/\s+/).map((k) => [+k[0], +k[1]]));
+    const onPath = {};
+    segs.forEach((s) => s.forEach((q) => { onPath[q[0] + '' + q[1]] = 1; }));
+    const setOf = (str) => { const o = {}; (str || '').trim().split(/\s+/).forEach((k) => { if (k) o[k] = 1; }); return o; };
+    const locked = setOf(sc.locked), hint = setOf(sc.hint), err = setOf(sc.err);
+    // node ordering
+    let maxN = 0, nextN = 0;
+    const parsed = rows.map((row) => row.map((s) => this.tok(s)));
+    parsed.forEach((row) => row.forEach((c) => { if (c.kind === 'node' && c.n > maxN) maxN = c.n; }));
+    for (let k = 1; k <= maxN && !nextN; k++) {
+      parsed.forEach((row, r) => row.forEach((c, cc) => { if (c.kind === 'node' && c.n === k && !onPath[r + '' + cc] && !nextN) nextN = k; }));
+    }
+    const cells = [], tiles = [];
+    const gap = cs * 0.03;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const k = r + '' + c, q = parsed[r][c];
+        const pos = { x: pad + c * cs, y: pad + r * cs };
+        tiles.push({ x: pos.x + gap, y: pos.y + gap, s: cs - 2 * gap, r: cs * 0.15 });
+        const fl = [];
+        if (onPath[k]) fl.push('path');
+        if (locked[k]) fl.push('locked');
+        if (err[k]) fl.push('err');
+        if (hint[k]) fl.push('hint');
+        let state = q.state || 'idle';
+        if (q.kind === 'node') {
+          if (p.big) fl.push('big');
+          if (onPath[k]) state = (sc.done && q.n === maxN) ? 'final' : 'reached';
+          else if (q.n === nextN) state = 'next';
+          else state = 'default';
+          if (err[k]) state = 'error';
+          if (q.n === 1) fl.push('start');
+        }
+        if (q.kind === 'empty' && !fl.length) continue;
+        cells.push({ x: pos.x, y: pos.y, s: cs, kind: q.kind, n: q.n || 0, state, dir: q.dir || 'r', pair: q.pair || 1, flags: fl.join(' ') });
+      }
+    }
+    const sw = cs * 0.34;
+    const done = !!sc.done;
+    const pts = segs.map((s) => s.map((q) => ctr(q[0], q[1])));
+    const first = pts.length ? pts[0][0] : { x: 0, y: 0 };
+    const lastSeg = pts.length ? pts[pts.length - 1] : [];
+    const head = lastSeg.length ? lastSeg[lastSeg.length - 1] : null;
+    const gEnd = head || { x: first.x + 1, y: first.y + 1 };
+    const g = { x1: first.x, y1: first.y, x2: gEnd.x + (gEnd.x === first.x && gEnd.y === first.y ? 1 : 0), y2: gEnd.y, a: done ? t.done : t.rampA, b: done ? t.done : t.rampB };
+    const ds = [0, 1, 2].map((i) => (pts[i] ? this.smooth(pts[i]) : ''));
+    const act = sc.act || 0;
+    const dAct = (!done && act >= 2 && lastSeg.length >= 2) ? this.smooth(lastSeg.slice(-act)) : '';
+    // bridges
+    let bridge = '';
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i][pts[i].length - 1], b = pts[i + 1][0];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const cx = mx + (-dy / len) * len * 0.3, cy = my + (dx / len) * len * 0.3;
+      bridge += 'M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + ' ';
+    }
+    let linkD = '';
+    (sc.links || '').trim().split(/\s+/).forEach((l) => {
+      if (l.indexOf('>') < 0) return;
+      const a = l.split('>')[0], b = l.split('>')[1];
+      const pa = ctr(+a[0], +a[1]), pb = ctr(+b[0], +b[1]);
+      linkD += 'M' + pa.x.toFixed(1) + ' ' + pa.y.toFixed(1) + ' L' + pb.x.toFixed(1) + ' ' + pb.y.toFixed(1) + ' ';
+    });
+    const showCur = head && !done;
+    const cur = { x: head ? head.x : 0, y: head ? head.y : 0, r: cs * 0.38, w1: cs * 0.12, w2: cs * 0.06, op: showCur ? 1 : 0 };
+    return {
+      size, theme: p.theme || 'light', skin, t, tiles, cells, cur,
+      gid: this._gid || (this._gid = 'fg' + Math.random().toString(36).slice(2, 8)),
+      g, d1: ds[0], d2: ds[1], d3: ds[2], dAct, bridge,
+      actCol: dark ? '#7FE6DB' : '#14B8AE',
+      sw, swHalo: sw * 1.55, swHi: sw * 0.3,
+      bridgeW: Math.max(2, cs * 0.06), bridgeDash: (cs * 0.1).toFixed(1) + ' ' + (cs * 0.1).toFixed(1),
+      linkD, linkW: Math.max(1.5, cs * 0.035), linkDash: '1 ' + (cs * 0.09).toFixed(1),
+      radius: Math.round(size * 0.05),
+      shadow: dark ? '0 10px 24px rgba(0,0,0,0.5)' : '0 8px 22px rgba(60,45,20,0.10)',
+      rootCls: sc.shake ? 'shake' : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

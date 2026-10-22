@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Special cell legend</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+.h2{font:700 20px/26px Sora,sans-serif;margin:0}
+.p{font:400 14px/20px Figtree,sans-serif;color:#4A4845;margin:0}
+.cue{font:600 13px/18px Figtree,sans-serif;color:#0B5C86;margin:0}
+.strip{display:flex;gap:10px;padding:10px;border-radius:14px;flex-wrap:wrap}
+.lab{font:600 12px/16px Figtree,sans-serif;color:#5C5A57;width:92px}
+</style>
+</helmet>
+<div style="width:1960px;height:2300px;box-sizing:border-box;padding:64px;background:#F6F3EE;color:#16161A;font-family:Figtree,sans-serif;display:flex;flex-direction:column;gap:32px">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="prot"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0  0.114503 0.786281 0.099216 0 0  -0.003882 -0.048116 1.051998 0 0  0 0 0 1 0"/></filter>
+    <filter id="deut"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0"/></filter>
+    <filter id="trit"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0  -0.078411 0.930809 0.147602 0 0  0.004733 0.691367 0.303900 0 0  0 0 0 1 0"/></filter>
+  </svg>
+  <div>
+    <div class="k">04 · Special cell legend</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">Nine cell families. Each has its own shape.</div>
+    <p class="p" style="margin-top:8px;font-size:16px;line-height:24px;max-width:900px">Rule, then the grayscale cue that separates it from every other cell. Light on the top strip, dark on the bottom strip. The colour-blind proof sits below.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px">
+    <sc-for list="{{cards}}" as="card" hint-placeholder-count="9">
+      <div class="card">
+        <h2 class="h2">{{card.name}}</h2>
+        <p class="p">{{card.rule}}</p>
+        <p class="cue">Shape cue: {{card.cue}}</p>
+        <div class="strip" style="background:#F6F3EE">
+          <sc-for list="{{card.cells}}" as="c" hint-placeholder-count="3"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="64" theme="light" hint-size="64px,64px"></dc-import></sc-for>
+        </div>
+        <div class="strip" style="background:#131210">
+          <sc-for list="{{card.cells}}" as="c" hint-placeholder-count="3"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="64" theme="dark" hint-size="64px,64px"></dc-import></sc-for>
+        </div>
+        <p class="p" style="font-size:12px;line-height:16px;color:#5C5A57">{{card.states}}</p>
+      </div>
+    </sc-for>
+  </div>
+
+  <div class="card" style="gap:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 class="h2" style="font-size:26px;line-height:32px">Colour-blind and grayscale proof</h2><p class="p">One of each family, same size, through Machado 2009 matrices at full severity.</p></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Original</div>
+        <div class="strip" style="background:#F6F3EE;padding:8px"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="light" hint-size="72px,72px"></dc-import></sc-for></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Grayscale</div>
+        <div class="strip" style="background:#F6F3EE;padding:8px;filter:grayscale(1)"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="light" hint-size="72px,72px"></dc-import></sc-for></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Protanopia</div>
+        <div class="strip" style="background:#F6F3EE;padding:8px;filter:url(#prot)"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="light" hint-size="72px,72px"></dc-import></sc-for></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Deuteranopia</div>
+        <div class="strip" style="background:#F6F3EE;padding:8px;filter:url(#deut)"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="light" hint-size="72px,72px"></dc-import></sc-for></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Tritanopia</div>
+        <div class="strip" style="background:#F6F3EE;padding:8px;filter:url(#trit)"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="light" hint-size="72px,72px"></dc-import></sc-for></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div class="lab">Dark · gray</div>
+        <div class="strip" style="background:#131210;padding:8px;filter:grayscale(1)"><sc-for list="{{proof}}" as="c" hint-placeholder-count="14"><dc-import name="Cell" kind="{{c.kind}}" n="{{c.n}}" state="{{c.state}}" dir="{{c.dir}}" pair="{{c.pair}}" flags="{{c.flags}}" size="72" theme="dark" hint-size="72px,72px"></dc-import></sc-for></div></div>
+    </div>
+    <p class="p">Result: no two families share an outline. The only pair that leans on tone is burn vs. dead-burned, and they differ by flame outline vs. hatch. Pair identity for portals is the inner dot, triangle or square, never the violet.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1960,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const n = (n, state, flags) => ({ kind: 'node', n, state: state || 'default', flags: flags || '', dir: 'r', pair: 1 });
+    const c = (kind, o) => Object.assign({ kind, n: 0, state: 'idle', flags: '', dir: 'r', pair: 1 }, o || {});
+    const cards = [
+      { name: 'Number node', rule: 'Connect 1, 2, 3 … N in order. Node 1 is the origin and wears an outer ring.', cue: 'solid disc with numeral; origin ring', states: 'Default · next target (pulse) · reached · origin reached · final · frozen (dashed) · error',
+        cells: [n(3), n(2, 'next'), n(1, 'reached', 'start'), n(5, 'final'), n(4, 'default', 'locked'), n(12, 'error')] },
+      { name: 'Dead cell', rule: 'Cannot be entered. Reads as a solid wall, never a red X.', cue: 'recessed diagonal hatch', states: 'Single state', cells: [c('dead')] },
+      { name: 'Direction cell', rule: 'The path must leave this cell in the arrow’s direction.', cue: 'chevron plus tinted exit edge', states: 'Up · right · down · left. Violation shows red tile tint.',
+        cells: [c('dir', { dir: 'u' }), c('dir', { dir: 'r' }), c('dir', { dir: 'd' }), c('dir', { dir: 'l' }), c('dir', { dir: 'r', flags: 'err' })] },
+      { name: 'Burn cell', rule: 'Can be crossed once. After that it burns out and blocks.', cue: 'flame outline, then charred hatch', states: 'Idle · crossed (burning) · burned',
+        cells: [c('burn'), c('burn', { state: 'crossed' }), c('burn', { state: 'burned' })] },
+      { name: 'Teleport cell', rule: 'Linked pair. Enter one, leave from the other. Up to three pairs.', cue: 'ring with inner marker: dot, triangle, square', states: 'Pair 1 · pair 2 · pair 3 · entered · exit burst',
+        cells: [c('tele', { pair: 1 }), c('tele', { pair: 2 }), c('tele', { pair: 3 }), c('tele', { pair: 1, state: 'entered' }), c('tele', { pair: 2, state: 'burst' })] },
+      { name: 'Freeze cell', rule: 'When crossed, locks the 8 surrounding cells for 3 moves.', cue: 'six-arm crystal; locked cells get frost plus a lock corner', states: 'Idle · activated (ring spreads) · locked neighbour · thawing',
+        cells: [c('freeze'), c('freeze', { state: 'active' }), c('empty', { flags: 'locked' }), c('freeze', { state: 'thaw' })] },
+      { name: 'Switch and gate', rule: 'Crossing a switch flips every gate it links to.', cue: 'toggle with knob left (off) or right (on); gate has vertical bars', states: 'Switch off · on · gate closed · gate open',
+        cells: [c('switch', { state: 'off' }), c('switch', { state: 'on' }), c('gate', { state: 'closed' }), c('gate', { state: 'open' })] },
+      { name: 'Bonus cell', rule: 'Optional. Collect it on the way for an extra star.', cue: 'outlined star; filled with sparkles when collected', states: 'Idle (soft pulse) · collected',
+        cells: [c('bonus'), c('bonus', { state: 'collected' })] },
+      { name: 'Countdown cell', rule: 'Cross it before it runs out. Each relevant move depletes the ring.', cue: 'number in a draining ring; cracked at 0', states: '5 · 4 · 3 · 2 · 1 (warning halo) · 0 (expired)',
+        cells: [5, 4, 3, 2, 1, 0].map((v) => c('count', { n: v })) }
+    ];
+    const proof = [
+      n(2, 'next'), n(1, 'reached', 'start'), c('dead'), c('dir', { dir: 'r' }), c('burn'), c('burn', { state: 'burned' }),
+      c('tele', { pair: 1 }), c('tele', { pair: 2 }), c('freeze'), c('switch', { state: 'on' }), c('gate', { state: 'closed' }), c('bonus'), c('count', { n: 3 }), c('count', { n: 0 })
+    ];
+    return { cards, proof };
+  }
+}
+</script>
+</body>
+</html>

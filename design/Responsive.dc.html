@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Responsive and board sizing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.card{background:#FFFFFF;border-radius:20px;box-shadow:inset 0 0 0 1px #DDD6CA;padding:24px;box-sizing:border-box}
+.h2{font:700 22px/28px Sora,sans-serif;margin:0}
+.p{font:400 14px/20px Figtree,sans-serif;color:#4A4845;margin:0}
+.mono{font:500 12px/16px ui-monospace,Menlo,monospace;color:#5C5A57}
+.fr{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.fr b{font:700 15px/20px Sora,sans-serif}
+.dv{border-radius:30px;overflow:hidden;box-shadow:0 0 0 1px #DDD6CA,0 20px 40px rgba(60,45,20,.14)}
+.blk{display:flex;align-items:center;justify-content:space-between;padding:0 8px;box-sizing:border-box;font:600 10px/12px Figtree;color:#4A4845;box-shadow:inset 0 0 0 1px #C9C1B2;background:#F6F3EE;width:197px}
+th,td{font:500 13px/18px Figtree;text-align:center;padding:6px 8px;border-bottom:1px solid #EEE9E0}
+th{font-weight:700;color:#5C5A57}
+td.l,th.l{text-align:left}
+</style>
+</helmet>
+<div style="width:2300px;height:4880px;box-sizing:border-box;padding:64px;background:#EFEBE4;font-family:Figtree,sans-serif;color:#16161A;display:flex;flex-direction:column;gap:32px">
+  <div>
+    <div class="k">10 · Responsive and board sizing</div>
+    <div style="font:700 44px/50px Sora,sans-serif;margin-top:8px;letter-spacing:-.02em">The board takes what is left, as large as it can be.</div>
+  </div>
+
+  <div style="display:flex;gap:24px;align-items:flex-start">
+    <div class="card" style="display:flex;gap:20px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column">
+        <div class="blk" style="height:22px;background:#E9E3D8">Safe top 44</div>
+        <div class="blk" style="height:28px">Top bar 56</div>
+        <div class="blk" style="height:30px">HUD 60</div>
+        <div style="width:197px;height:200px;box-sizing:border-box;box-shadow:inset 0 0 0 1.5px #0B7F7A;background:#D6EFEC;display:flex;align-items:center;justify-content:center"><div style="width:180px;height:180px;background:#0B7F7A;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px/14px Sora;text-align:center">Board<br>boardSide</div></div>
+        <div class="blk" style="height:24px">Node tracker 48</div>
+        <div class="blk" style="height:28px">Feedback 56</div>
+        <div class="blk" style="height:50px">Action bar 100</div>
+        <div class="blk" style="height:12px;background:#E9E3D8">Inset 24</div>
+      </div>
+      <div style="width:300px;display:flex;flex-direction:column;gap:10px">
+        <div class="k">Portrait, 393 × 852 at 50%</div>
+        <p class="p">Everything outside the board is fixed in dp. The board zone is the flexible row and always wins the leftover space.</p>
+      </div>
+    </div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <h2 class="h2">Sizing logic</h2>
+      <div style="background:#16161A;color:#F2EEE6;border-radius:14px;padding:16px 18px;font:500 14px/22px ui-monospace,Menlo,monospace">
+        availableWidth  = screenW − 2 × margin&nbsp;&nbsp;(margin 16 phone, 24 tablet)<br>
+        availableHeight = screenH − safeTop − topBar 56 − HUD 60<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− tracker 48 − feedback 56 − actionBar 100 − inset<br>
+        boardSide = min(availableWidth, availableHeight, 760)<br>
+        cellSize&nbsp;&nbsp;= floor(boardSide / gridSize)&nbsp;&nbsp;&nbsp;(4 … 8, 9 and 10 in Endless)<br>
+        if cellSize &lt; 40dp → cellSize = 40, board pans and pinch-zooms inside its frame
+      </div>
+      <ul class="p" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>The board is centred in its zone; cell size is always an integer so strokes stay crisp.</li>
+        <li>Safe areas: top 44 (up to 48 with a cutout), bottom 24 for the gesture bar (16 minimum), 24 each side in landscape.</li>
+        <li>Tablet: board capped at 760dp and centred; optional side panel for stats at 340dp.</li>
+        <li>Landscape: board on the left at full height, HUD, tracker, feedback and actions stacked on the right.</li>
+        <li>Touch targets stay 48dp or more at every size, including a 40dp cell with its 3% gap.</li>
+      </ul>
+    </div>
+    <div class="card" style="width:640px;flex:none">
+      <h2 class="h2">Cell size (dp) by device and grid</h2>
+      <table style="border-collapse:collapse;width:100%;margin-top:10px">
+        <tr><th class="l">Device</th><sc-for list="{{grids}}" as="g" hint-placeholder-count="7"><th>{{g}}×{{g}}</th></sc-for></tr>
+        <sc-for list="{{table}}" as="r" hint-placeholder-count="6"><tr><td class="l">{{r.name}}</td><sc-for list="{{r.cells}}" as="c" hint-placeholder-count="7"><td style="color:{{c.col}};font-weight:{{c.fw}}">{{c.v}}</td></sc-for></tr></sc-for>
+      </table>
+      <p class="p" style="margin-top:10px"><strong style="color:#C8372D">40 ↔</strong> means the board is held at 40dp cells and pans inside its frame.</p>
+    </div>
+  </div>
+
+  <div class="k">Same level, 6 × 6, across devices (true size)</div>
+  <div style="display:flex;gap:48px;align-items:flex-start">
+    <div class="fr"><b>Small Android · 360 × 640</b><div class="dv" style="width:360px;height:640px"><dc-import name="Game" scene="mid" w="360" h="640" theme="light" hint-size="360px,640px"></dc-import></div></div>
+    <div class="fr"><b>Standard · 393 × 852</b><div class="dv" style="width:393px;height:852px"><dc-import name="Game" scene="mid" w="393" h="852" theme="light" hint-size="393px,852px"></dc-import></div></div>
+    <div class="fr"><b>Large · 430 × 932</b><div class="dv" style="width:430px;height:932px"><dc-import name="Game" scene="mid" w="430" h="932" theme="light" hint-size="430px,932px"></dc-import></div></div>
+    <div class="fr"><b>iPhone class · 390 × 844</b><div class="dv" style="width:390px;height:844px"><dc-import name="Game" scene="mid" w="390" h="844" theme="light" hint-size="390px,844px"></dc-import></div></div>
+  </div>
+
+  <div class="k" style="margin-top:8px">Dense 8 × 8 Master board, same sizes, with the 40dp fallback on the smallest phone</div>
+  <div style="display:flex;gap:48px;align-items:flex-start">
+    <div class="fr"><b>360 × 640 · 40dp fallback, pan and zoom</b><div class="dv" style="width:360px;height:640px"><dc-import name="Game" scene="dense" w="360" h="640" theme="light" hint-size="360px,640px"></dc-import></div></div>
+    <div class="fr"><b>393 × 852 · 45dp cells</b><div class="dv" style="width:393px;height:852px"><dc-import name="Game" scene="dense" w="393" h="852" theme="light" hint-size="393px,852px"></dc-import></div></div>
+    <div class="fr"><b>430 × 932 · 49dp cells</b><div class="dv" style="width:430px;height:932px"><dc-import name="Game" scene="dense" w="430" h="932" theme="light" hint-size="430px,932px"></dc-import></div></div>
+  </div>
+
+  <div class="k" style="margin-top:8px">Tablet · portrait 800 × 1280 and landscape 1280 × 800</div>
+  <div style="display:flex;gap:48px;align-items:flex-start">
+    <div class="fr"><b>Tablet portrait · board capped and centred</b><div class="dv" style="width:800px;height:1280px"><dc-import name="Game" scene="mid" w="800" h="1280" theme="light" hint-size="800px,1280px"></dc-import></div></div>
+    <div class="fr"><b>Tablet landscape · board left, controls right</b><div class="dv" style="width:1280px;height:800px"><dc-import name="Game" scene="mid" w="1280" h="800" theme="light" hint-size="1280px,800px"></dc-import></div></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2300,"height":4880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const grids = [4, 5, 6, 7, 8, 9, 10];
+    const devs = [
+      { name: '360 × 640 small', w: 360, h: 640, land: false }, { name: '393 × 852 standard', w: 393, h: 852, land: false },
+      { name: '430 × 932 large', w: 430, h: 932, land: false }, { name: '390 × 844 iPhone', w: 390, h: 844, land: false },
+      { name: '800 × 1280 tablet', w: 800, h: 1280, land: false, tab: true }, { name: '1280 × 800 landscape', w: 1280, h: 800, land: true, tab: true }
+    ];
+    const table = devs.map((d) => {
+      const m = d.tab ? 24 : 16, top = d.tab ? 24 : 44, ins = d.tab ? 16 : 24;
+      let side;
+      if (d.land) side = Math.min(d.h - top - ins - 2 * m, d.w - 340 - 3 * m, 760);
+      else side = Math.min(d.w - 2 * m, d.h - top - 56 - 60 - 48 - 56 - 100 - ins, 760);
+      return { name: d.name, cells: grids.map((g) => { const c = Math.floor(side / g); return c < 40 ? { v: '40 ↔', col: '#C8372D', fw: 700 } : { v: String(c), col: '#16161A', fw: 500 }; }) };
+    });
+    return { grids, table };
+  }
+}
+</script>
+</body>
+</html>

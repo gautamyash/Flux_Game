@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX screens A</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.sc{width:390px;height:844px;box-sizing:border-box;background:var(--bg);color:var(--tx);font-family:Figtree,sans-serif;display:flex;flex-direction:column;padding:44px 20px 24px;overflow:hidden;position:relative}
+.ti{font:700 28px/34px Sora,sans-serif;letter-spacing:-.02em;margin:0}
+.h3{font:700 20px/26px Sora,sans-serif;margin:0;letter-spacing:-.01em}
+.bd{font:400 16px/24px Figtree,sans-serif;color:var(--t2);margin:0}
+.cap{font:600 12px/16px Figtree,sans-serif;letter-spacing:.03em;color:var(--t2)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:56px;border-radius:16px;font:700 16px/20px Figtree,sans-serif;border:0;box-sizing:border-box;width:100%;cursor:pointer}
+.b1{background:var(--ac);color:var(--oa)}
+.b2{background:var(--rs);color:var(--tx);box-shadow:inset 0 0 0 1.5px var(--gr)}
+.b3{background:transparent;color:var(--ac)}
+.cd{background:var(--rs);border-radius:20px;box-shadow:inset 0 0 0 1px var(--gr);box-sizing:border-box}
+.ib{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--tx);cursor:pointer}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--gr)}
+.num{font-family:Sora,sans-serif;font-weight:700;font-variant-numeric:tabular-nums}
+@keyframes fx-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.pls{animation:fx-pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pls{animation:none}}
+</style>
+</helmet>
+<div class="sc" style="--bg:{{t.bg}};--sf:{{t.surface}};--rs:{{t.raised}};--gr:{{t.grid}};--tx:{{t.text}};--t2:{{t.text2}};--ac:{{t.accent}};--as:{{t.accentSoft}};--oa:{{t.onAccent}};--dg:{{t.danger}};--bo:{{t.bonus}}">
+
+<!-- SPLASH -->
+<sc-if value="{{s.splash}}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px">
+    <svg width="132" height="132" viewBox="0 0 64 64" fill="none" style="color:var(--ac)">
+      <path d="M50 16 H26 Q18 16 18 24 V50" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="64" stroke-dashoffset="{{sp.stem}}"/>
+      <path d="M34 34 H47" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-dasharray="14" stroke-dashoffset="{{sp.bar}}"/>
+      <circle cx="50" cy="16" r="3.2" fill="var(--bg)"/>
+      <circle cx="50" cy="16" r="9" stroke="currentColor" stroke-width="1.5" opacity="{{sp.ring}}"/>
+    </svg>
+    <div style="font:700 48px/48px Sora,sans-serif;letter-spacing:.08em;opacity:{{sp.word}}">FLUX</div>
+    <div style="font:500 16px/22px Figtree,sans-serif;color:var(--t2);opacity:{{sp.tag}}">Connect. Adapt. Solve.</div>
+  </div>
+  <div class="cap" style="text-align:center">{{sp.time}}</div>
+</sc-if>
+
+<!-- ONBOARDING -->
+<sc-if value="{{s.onb}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;justify-content:space-between;align-items:center;height:48px">
+    <div class="cap">{{ob.step}} of 3</div>
+    <button class="btn b3" style="width:auto;height:48px;padding:0 8px">Skip</button>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+    <sc-if value="{{ob.isBoard}}"><dc-import name="Board" scene="{{ob.scene}}" size="300" theme="{{theme}}" hint-size="300px,300px"></dc-import></sc-if>
+    <sc-if value="{{ob.isCells}}">
+      <div style="display:grid;grid-template-columns:repeat(3,92px);gap:12px">
+        <sc-for list="{{ob.cells}}" as="c" hint-placeholder-count="6"><dc-import name="Cell" kind="{{c.kind}}" state="{{c.state}}" dir="{{c.dir}}" n="{{c.n}}" size="92" theme="{{theme}}" hint-size="92px,92px"></dc-import></sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0 20px">
+    <h1 class="ti">{{ob.title}}</h1>
+    <p class="bd">{{ob.body}}</p>
+  </div>
+  <div style="display:flex;justify-content:center;gap:8px;padding-bottom:20px">
+    <sc-for list="{{ob.dots}}" as="d" hint-placeholder-count="3"><div class="dot" style="width:{{d.w}}px;background:{{d.bg}}"></div></sc-for>
+  </div>
+  <button class="btn b1">{{ob.cta}}</button>
+  <div class="cap" style="text-align:center;padding-top:12px;min-height:16px">{{ob.note}}</div>
+</sc-if>
+
+<!-- TUTORIAL -->
+<sc-if value="{{s.tut}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;justify-content:space-between;align-items:center;height:48px"><div class="cap">Quick practice</div><button class="btn b3" style="width:auto;height:48px;padding:0 8px">Skip</button></div>
+  <div style="padding:12px 0 0"><h1 class="ti">Draw 1 → 2 → 3</h1><p class="bd" style="margin-top:6px">Press on 1 and drag. Lift when you reach 3.</p></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+    <div style="position:relative;width:340px;height:340px">
+      <dc-import name="Board" scene="tut" size="340" theme="{{theme}}" hint-size="340px,340px"></dc-import>
+      <div style="position:absolute;left:172px;top:172px;width:0;height:0">
+        <div style="position:absolute;left:0;top:-2px;width:109px;border-top:3px dotted var(--ac)"></div>
+        <div style="position:absolute;left:107px;top:0;height:109px;border-left:3px dotted var(--ac)"></div>
+      </div>
+      <div style="position:absolute;left:150px;top:182px;width:56px;height:56px;border-radius:50%;background:var(--tx);opacity:.16;box-shadow:inset 0 0 0 2px var(--tx)"></div>
+    </div>
+  </div>
+  <div class="cd" style="padding:14px 16px;display:flex;gap:12px;align-items:center;margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ac)"></span><span style="font:500 15px/22px Figtree">Nice. Now drag right, then down, to reach 3.</span></div>
+  <button class="btn b2" style="color:var(--t2)">Skip tutorial</button>
+</sc-if>
+
+<!-- HOME -->
+<sc-if value="{{s.home}}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;left:-110px;top:180px;transform:rotate(-9deg);opacity:.16;pointer-events:none"><dc-import name="Board" scene="mid" size="560" theme="{{theme}}" hint-size="560px,560px"></dc-import></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;height:48px;position:relative">
+    <div style="display:flex;align-items:center;gap:8px"><svg width="28" height="28" viewBox="0 0 64 64" fill="none" style="color:var(--ac)"><path d="M50 16 H26 Q18 16 18 24 V50 M34 34 H47" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="16" r="3.2" fill="var(--bg)"/></svg><span style="font:700 18px/22px Sora;letter-spacing:.08em">FLUX</span></div>
+    <button class="ib" aria-label="Settings"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.sliders}}"/></svg></button>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;position:relative;padding-bottom:60px">
+    <div class="cap" style="color:var(--ac)">PATH PUZZLE</div>
+    <div style="font:700 44px/48px Sora,sans-serif;letter-spacing:-.03em">Connect.<br>Adapt.<br>Solve.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px;position:relative">
+    <button class="btn b1" style="height:84px;justify-content:space-between;padding:0 20px 0 22px;text-align:left">
+      <span style="display:flex;flex-direction:column;gap:2px"><span style="font:700 20px/24px Sora">Continue</span><span style="font:500 14px/18px Figtree;opacity:.9">Level 27 · Chapter 4 · Warp</span></span>
+      <span style="width:44px;height:44px;border-radius:50%;background:var(--oa);color:var(--ac);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="{{ic.play}}"/></svg></span>
+    </button>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <button class="cd" style="height:84px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--tx);font:600 14px/18px Figtree"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="{{ic.grid}}"/></svg>Levels</button>
+      <button class="cd" style="height:84px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--tx);font:600 14px/18px Figtree"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.calendar}}"/></svg>Daily</button>
+      <button class="cd" style="height:84px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--tx);font:600 14px/18px Figtree"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="{{ic.bolt}}"/></svg>Modes</button>
+    </div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 0 0;font:500 14px/20px Figtree;color:var(--t2)">
+      <span style="display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linejoin="round"><path d="{{ic.flame}}"/></svg><b class="num" style="color:var(--tx)">12</b> day streak</span>
+      <span class="dot" style="width:4px;height:4px"></span>
+      <span><b class="num" style="color:var(--tx)">214</b> solved</span>
+    </div>
+  </div>
+</sc-if>
+
+<!-- CHAPTER SELECT -->
+<sc-if value="{{s.chapters}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;gap:4px;height:48px;margin-left:-8px"><button class="ib" aria-label="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.back}}"/></svg></button><span class="cap">HOME</span></div>
+  <div style="padding:4px 0 14px"><h1 class="ti">Chapters</h1><p class="bd" style="font-size:14px;line-height:20px;margin-top:4px">Each chapter adds exactly one new mechanic. 18 of 64 solved.</p></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <sc-for list="{{chapters}}" as="c" hint-placeholder-count="8">
+      <div class="cd" style="height:146px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;opacity:{{c.op}};box-shadow:inset 0 0 0 {{c.bw}}px {{c.bc}};background:{{c.bg}}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div class="cap">CHAPTER {{c.n}}</div><div style="font:700 17px/22px Sora;margin-top:2px">{{c.name}}</div></div>
+          <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="14" stroke="var(--gr)" stroke-width="3.5"/><circle cx="17" cy="17" r="14" stroke="{{c.tint}}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="{{c.dash}}" transform="rotate(-90 17 17)"/><path d="{{c.icon}}" stroke="var(--tx)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(8.5 8.5) scale(0.7083)"/></svg>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end">
+          <div style="display:flex;gap:6px"><sc-for list="{{c.cells}}" as="k" hint-placeholder-count="2"><dc-import name="Cell" kind="{{k.kind}}" state="{{k.state}}" dir="{{k.dir}}" n="{{k.n}}" size="38" theme="{{theme}}" hint-size="38px,38px"></dc-import></sc-for></div>
+          <div class="num" style="font-size:13px;color:var(--t2)">{{c.prog}}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- LEVEL SELECT MAP -->
+<sc-if value="{{s.levels}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:48px"><button class="ib" aria-label="Back" style="margin-left:-8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.back}}"/></svg></button><div style="text-align:center"><div class="h3" style="font-size:17px">Chapter 4 · Warp</div><div class="cap">2 of 8 solved</div></div><div style="width:48px"></div></div>
+  <div class="cd" style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-top:6px;background:{{t.tele}}1F">
+    <dc-import name="Cell" kind="tele" pair="1" size="40" theme="{{theme}}" hint-size="40px,40px"></dc-import>
+    <div><div class="cap" style="color:var(--tx)">NEW MECHANIC</div><div style="font:500 14px/18px Figtree">Teleport. Enter one portal, leave from its pair.</div></div>
+  </div>
+  <div style="position:relative;flex:1;margin:6px -20px 0;overflow:hidden">
+    <svg width="390" height="600" viewBox="0 0 390 600" style="position:absolute;left:0;top:0" fill="none" stroke-linecap="round">
+      <path d="{{map.dDone}}" stroke="{{t.accent}}" stroke-width="6"/>
+      <path d="{{map.dTodo}}" stroke="{{t.grid}}" stroke-width="5" stroke-dasharray="2 12"/>
+    </svg>
+    <sc-for list="{{map.nodes}}" as="n" hint-placeholder-count="8">
+      <div style="position:absolute;left:{{n.x}}px;top:{{n.y}}px;width:60px;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:{{n.bg}};box-shadow:{{n.sh}};border-radius:{{n.rad}};transform:rotate({{n.rot}}deg);color:{{n.fg}}">
+          <div style="transform:rotate({{n.irot}}deg);display:flex;align-items:center;justify-content:center">
+            <sc-if value="{{n.showNum}}"><span class="num" style="font-size:20px">{{n.lv}}</span></sc-if>
+            <sc-if value="{{n.showLock}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.lock}}"/></svg></sc-if>
+            <sc-if value="{{n.showStar}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="{{ic.star}}"/></svg></sc-if>
+          </div>
+        </div>
+        <div style="display:flex;gap:2px;height:12px">
+          <sc-for list="{{n.stars}}" as="st" hint-placeholder-count="3"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{st.f}}" stroke="{{st.s}}" stroke-width="2.4" stroke-linejoin="round"><path d="{{ic.star}}"/></svg></sc-for>
+        </div>
+        <div class="cap" style="font-size:11px;line-height:14px;color:var(--tx);height:14px">{{n.label}}</div>
+      </div>
+    </sc-for>
+    <div style="position:absolute;left:0;right:0;top:0;height:44px;background:linear-gradient(var(--bg),transparent)"></div>
+  </div>
+  <div class="cap" style="text-align:center;padding-top:8px">Scrolls upward. The map re-centres on your current level.</div>
+</sc-if>
+
+<!-- CHAPTER INTRO -->
+<sc-if value="{{s.intro}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;height:48px;margin-left:-8px"><button class="ib" aria-label="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ic.back}}"/></svg></button></div>
+  <div style="position:relative;height:150px;margin:0 -20px;overflow:hidden">
+    <svg width="390" height="150" viewBox="0 0 390 150" fill="none"><g stroke="{{t.tele}}" stroke-width="2.5" opacity="0.5"><circle cx="300" cy="75" r="30"/><circle cx="300" cy="75" r="52" stroke-dasharray="3 8" stroke-linecap="round"/><circle cx="300" cy="75" r="76" opacity="0.5"/></g><g stroke="{{t.tele}}" stroke-width="2.5" opacity="0.5"><circle cx="70" cy="95" r="22"/><circle cx="70" cy="95" r="40" stroke-dasharray="3 8" stroke-linecap="round"/></g><path d="M92 95 Q185 20 278 75" stroke="{{t.tele}}" stroke-width="3" stroke-dasharray="6 8" stroke-linecap="round" opacity="0.8"/><circle cx="300" cy="75" r="7" fill="{{t.tele}}"/><path d="M70 87 L77 101 H63 Z" fill="{{t.tele}}"/></svg>
+  </div>
+  <div style="padding-top:10px"><div class="cap" style="color:var(--ac)">CHAPTER 4 OF 8</div><h1 class="ti" style="font-size:34px;line-height:40px;margin-top:4px">Warp</h1><p class="bd" style="margin-top:6px">New mechanic: <b style="color:var(--tx)">Teleport</b>. Portals come in linked pairs. Step into one and your path continues from the other.</p></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center"><dc-import name="Board" scene="tele" size="300" theme="{{theme}}" hint-size="300px,300px"></dc-import></div>
+  <div class="cap" style="text-align:center;padding-bottom:10px">8 levels · about 15 minutes</div>
+  <button class="btn b1">Start chapter</button>
+</sc-if>
+
+<!-- CHAPTER COMPLETE -->
+<sc-if value="{{s.chdone}}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;left:0;top:0;width:390px;height:420px;pointer-events:none">
+    <svg width="390" height="420" viewBox="0 0 390 420" fill="none"><g stroke="var(--ac)" opacity="0.35"><circle cx="195" cy="210" r="120" stroke-width="2"/><circle cx="195" cy="210" r="170" stroke-width="1.5" stroke-dasharray="2 10" stroke-linecap="round"/><circle cx="195" cy="210" r="215" stroke-width="1"/></g><g fill="var(--ac)"><circle cx="50" cy="120" r="4" opacity=".5"/><circle cx="338" cy="96" r="5" opacity=".4"/><circle cx="318" cy="300" r="3" opacity=".6"/><circle cx="64" cy="320" r="4" opacity=".4"/></g><g fill="var(--bo)"><circle cx="96" cy="70" r="3"/><circle cx="296" cy="168" r="3"/><circle cx="40" cy="236" r="3"/></g></svg>
+  </div>
+  <div style="height:48px"></div>
+  <div style="text-align:center;position:relative;padding-top:6px"><div class="cap" style="color:var(--ac)">CHAPTER 4 COMPLETE</div><h1 class="ti" style="font-size:34px;line-height:40px;margin-top:4px">Warp, solved.</h1></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative"><div style="box-shadow:0 0 0 8px var(--as);border-radius:24px"><dc-import name="Board" scene="done" size="250" theme="{{theme}}" hint-size="250px,250px"></dc-import></div></div>
+  <div class="cd" style="display:grid;grid-template-columns:repeat(3,1fr);padding:16px 8px;margin-bottom:14px;position:relative">
+    <div style="text-align:center"><div class="num" style="font-size:24px">8/8</div><div class="cap">Levels</div></div>
+    <div style="text-align:center"><div class="num" style="font-size:24px">21<span style="font-size:14px;color:var(--t2)">/24</span></div><div class="cap">Stars</div></div>
+    <div style="text-align:center"><div class="num" style="font-size:24px">3</div><div class="cap">Perfect</div></div>
+  </div>
+  <div class="cd" style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;background:{{t.freeze}}1F;position:relative"><dc-import name="Cell" kind="freeze" size="44" theme="{{theme}}" hint-size="44px,44px"></dc-import><div><div class="cap" style="color:var(--tx)">UNLOCKED</div><div style="font:600 15px/20px Figtree">Chapter 5 · Freeze</div></div></div>
+  <button class="btn b1" style="position:relative">Continue to Chapter 5</button>
+  <button class="btn b3" style="position:relative;height:44px">Back to chapters</button>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","default":"home","options":["splash0","splash1","splash2","splash3","onb1","onb2","onb3","tut","home","chapters","levels","intro","chdone"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(dark) {
+    const L = {bg:'#F6F3EE',surface:'#FDFBF7',raised:'#FFFFFF',grid:'#DDD6CA',text:'#16161A',text2:'#5C5A57',accent:'#0B7F7A',accentSoft:'#D6EFEC',onAccent:'#FFFFFF',danger:'#C8372D',bonus:'#B37A00',tele:'#7A45D6',freeze:'#1E8FC9',dir:'#4A56D6',burn:'#D9641A',sw:'#C42E75',count:'#C8372D'};
+    const D = {bg:'#131210',surface:'#1D1C19',raised:'#282621',grid:'#34312B',text:'#F2EEE6',text2:'#A9A397',accent:'#3FD1C4',accentSoft:'#123A37',onAccent:'#0A1F1E',danger:'#FF7468',bonus:'#FFC93D',tele:'#B592FF',freeze:'#6CC7F5',dir:'#8E98FF',burn:'#FF9A52',sw:'#FF7DB0',count:'#FF7468'};
+    return dark ? D : L;
+  }
+  renderVals() {
+    const p = this.props;
+    const dark = p.theme === 'dark';
+    const t = this.pal(dark);
+    const scr = p.screen || 'home';
+    const s = { splash: /^splash/.test(scr), onb: /^onb/.test(scr), tut: scr === 'tut', home: scr === 'home', chapters: scr === 'chapters', levels: scr === 'levels', intro: scr === 'intro', chdone: scr === 'chdone' };
+    const ic = {
+      back: 'M15 5 L8 12 L15 19', play: 'M8 5 L19 12 L8 19 Z',
+      sliders: 'M4 7 H14 M18 7 H20 M4 17 H6 M10 17 H20 M14 7 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 M6 17 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0',
+      grid: 'M4 4 H10 V10 H4 Z M14 4 H20 V10 H14 Z M4 14 H10 V20 H4 Z M14 14 H20 V20 H14 Z',
+      calendar: 'M5 6 H19 a1 1 0 0 1 1 1 V19 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 V7 a1 1 0 0 1 1 -1 Z M4 10 H20 M8 3 V7 M16 3 V7',
+      bolt: 'M13 3 L5 13 H11 L10 21 L19 10 H13 Z',
+      flame: 'M12 3 C13.5 6.5 17.5 8.5 17.5 13.5 C17.5 17 15 20 12 20 C9 20 6.5 17 6.5 13.5 C6.5 11.5 7.5 10 9 8.5 C9 10.5 10 11.5 11 11.5 C10.3 8.5 10.3 5.5 12 3 Z',
+      lock: 'M7 11 V8 a5 5 0 0 1 10 0 V11 M6 11 H18 a1 1 0 0 1 1 1 V19 a1 1 0 0 1 -1 1 H6 a1 1 0 0 1 -1 -1 V12 a1 1 0 0 1 1 -1 Z',
+      check: 'M5 12.5 L10 17.5 L19 7',
+      star: 'M12 3 L14.8 9 L21 9.7 L16.4 14 L17.7 20.5 L12 17.3 L6.3 20.5 L7.6 14 L3 9.7 L9.2 9 Z'
+    };
+    // splash
+    const frames = [
+      { stem: 64, bar: 14, ring: 1, word: 0, tag: 0, time: '0 ms · node 1 appears' },
+      { stem: 28, bar: 14, ring: 0, word: 0, tag: 0, time: '300 ms · path draws the stem' },
+      { stem: 0, bar: 6, ring: 0, word: 0.4, tag: 0, time: '600 ms · corner, bar warps in' },
+      { stem: 0, bar: 0, ring: 0, word: 1, tag: 1, time: '900 ms · wordmark and tagline settle' }
+    ];
+    const sp = frames[+(scr.replace('splash', '')) || 0];
+    // onboarding
+    const OB = {
+      onb1: { step: 1, title: 'Draw one path', body: 'Connect the numbers in order with a single unbroken line. Drag to draw, drag back to undo.', isBoard: true, scene: 'tut', cells: [], cta: 'Next', note: '' },
+      onb2: { step: 2, title: 'Cells that change the rules', body: 'Walls, arrows, flames, portals, frost and switches. Each one is introduced alone, the first time you meet it.', isBoard: false, scene: 'tut', cells: [{ kind: 'dead' }, { kind: 'dir', dir: 'r' }, { kind: 'burn', state: 'idle' }, { kind: 'tele', state: 'idle' }, { kind: 'freeze', state: 'idle' }, { kind: 'switch', state: 'on' }], cta: 'Next', note: '' },
+      onb3: { step: 3, title: 'Calm by design', body: 'No timers unless you pick one. Undo is always free. Every blocked move tells you exactly why.', isBoard: true, scene: 'mini', cells: [], cta: 'Try a practice puzzle', note: 'No account needed. Progress saves on this device.' }
+    };
+    const ob = Object.assign({}, OB[scr] || OB.onb1);
+    ob.isCells = !ob.isBoard;
+    ob.dots = [1, 2, 3].map((i) => ({ w: i === ob.step ? 24 : 8, bg: i === ob.step ? t.accent : t.grid }));
+    // chapters
+    const tints = [t.accent, t.dir, t.burn, t.tele, t.freeze, t.sw, t.count, t.text];
+    const names = ['Basics', 'Direction', 'Hazards', 'Warp', 'Freeze', 'Switch', 'Pressure', 'Master'];
+    const cl = (kind, o) => Object.assign({ kind, state: 'idle', dir: 'r', n: 0 }, o || {});
+    const cellSets = [[cl('node', { n: 1, state: 'reached' }), cl('node', { n: 2, state: 'default' })], [cl('dir', { dir: 'r' }), cl('dir', { dir: 'd' })], [cl('dead'), cl('burn')], [cl('tele')], [cl('freeze')], [cl('switch', { state: 'on' }), cl('gate', { state: 'open' })], [cl('count', { n: 3 })], [cl('tele'), cl('burn'), cl('count', { n: 2 })]];
+    const prog = [8, 8, 8, 2, 0, 0, 0, 0];
+    const lockIcon = ic.lock, checkIcon = ic.check;
+    const chapters = names.map((nm, i) => {
+      const done = prog[i] === 8, cur = i === 3, locked = i > 3;
+      const frac = prog[i] / 8;
+      const dash = (87.96 * frac).toFixed(1) + ' 87.96';
+      return { n: '0' + (i + 1), name: nm, tint: tints[i], dash, op: locked ? 0.55 : 1, bw: cur ? 2 : 1, bc: cur ? t.accent : t.grid, bg: cur ? t.accentSoft : t.raised, cells: locked ? cellSets[i].slice(0, 2) : cellSets[i].slice(0, 3), prog: done ? 'Complete' : (locked ? 'Locked' : prog[i] + ' / 8'), icon: done ? checkIcon : (locked ? lockIcon : 'M8 5 L19 12 L8 19 Z') };
+    });
+    // level map
+    const st = ['perfect', 'completed', 'current', 'available', 'locked', 'locked', 'locked', 'special'];
+    const pts = [];
+    for (let i = 0; i < 8; i++) pts.push({ x: 195 + 92 * Math.sin(i * 1.3), y: 560 - i * 72 });
+    const smooth = (arr) => {
+      if (arr.length < 2) return '';
+      let d = 'M' + arr[0].x.toFixed(0) + ' ' + arr[0].y.toFixed(0);
+      for (let i = 1; i < arr.length; i++) {
+        const a = arr[i - 1], b = arr[i], my = (a.y + b.y) / 2;
+        d += ' C' + a.x.toFixed(0) + ' ' + my.toFixed(0) + ' ' + b.x.toFixed(0) + ' ' + my.toFixed(0) + ' ' + b.x.toFixed(0) + ' ' + b.y.toFixed(0);
+      }
+      return d;
+    };
+    const nodes = pts.map((q, i) => {
+      const k = st[i];
+      const o = { x: q.x - 30, y: q.y - 30, lv: 25 + i, bg: t.raised, fg: t.text, sh: 'inset 0 0 0 1.5px ' + t.grid, rad: '50%', rot: 0, irot: 0, showNum: true, showLock: false, showStar: false, label: '', stars: [] };
+      const star = (n) => [0, 1, 2].map((j) => ({ f: j < n ? t.bonus : 'none', s: j < n ? t.bonus : t.grid }));
+      if (k === 'perfect') { o.bg = t.accent; o.fg = t.onAccent; o.sh = '0 0 0 3px ' + t.bonus; o.stars = star(3); o.label = 'Perfect'; }
+      if (k === 'completed') { o.bg = t.accentSoft; o.sh = 'inset 0 0 0 2px ' + t.accent; o.stars = star(2); }
+      if (k === 'current') { o.bg = t.accent; o.fg = t.onAccent; o.sh = '0 0 0 6px ' + t.accentSoft + ', 0 0 0 7px ' + t.accent; o.label = 'You are here'; o.stars = star(0).map(() => ({ f: 'none', s: 'transparent' })); }
+      if (k === 'available') { o.sh = 'inset 0 0 0 2.5px ' + t.accent; o.stars = star(0); }
+      if (k === 'locked') { o.bg = t.surface; o.fg = t.text2; o.showNum = false; o.showLock = true; o.stars = star(0).map(() => ({ f: 'none', s: 'transparent' })); }
+      if (k === 'special') { o.rad = '14px'; o.rot = 45; o.irot = -45; o.showNum = false; o.showStar = true; o.fg = t.bonus; o.sh = 'inset 0 0 0 2.5px ' + t.bonus; o.label = 'Challenge'; o.stars = star(0).map(() => ({ f: 'none', s: 'transparent' })); }
+      return o;
+    });
+    const map = { nodes, dDone: smooth(pts.slice(0, 3)), dTodo: smooth(pts.slice(2)) };
+    return { t, s, ic, sp, ob, chapters, map, theme: p.theme || 'light' };
+  }
+}
+</script>
+</body>
+</html>

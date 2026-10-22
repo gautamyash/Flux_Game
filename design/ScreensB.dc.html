@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLUX screens B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.sc{width:390px;height:844px;box-sizing:border-box;background:var(--bg);color:var(--tx);font-family:Figtree,sans-serif;display:flex;flex-direction:column;padding:44px 20px 24px;overflow:hidden;position:relative}
+.ti{font:700 28px/34px Sora,sans-serif;letter-spacing:-.02em;margin:0}
+.h3{font:700 20px/26px Sora,sans-serif;margin:0;letter-spacing:-.01em}
+.bd{font:400 16px/24px Figtree,sans-serif;color:var(--t2);margin:0}
+.cap{font:600 12px/16px Figtree,sans-serif;letter-spacing:.03em;color:var(--t2)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:56px;border-radius:16px;font:700 16px/20px Figtree,sans-serif;border:0;box-sizing:border-box;width:100%;cursor:pointer}
+.b1{background:var(--ac);color:var(--oa)}
+.b2{background:var(--rs);color:var(--tx);box-shadow:inset 0 0 0 1.5px var(--gr)}
+.b3{background:transparent;color:var(--ac)}
+.cd{background:var(--rs);border-radius:20px;box-shadow:inset 0 0 0 1px var(--gr);box-sizing:border-box}
+.ib{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--tx);cursor:pointer}
+.num{font-family:Sora,sans-serif;font-weight:700;font-variant-numeric:tabular-nums}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font:500 15px/20px Figtree}
+.row + .row{box-shadow:0 -1px 0 var(--gr)}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;font:600 12px/16px Figtree;background:var(--as);color:var(--tx)}
+</style>
+</helmet>
+<div class="sc" style="--bg:{{t.bg}};--sf:{{t.surface}};--rs:{{t.raised}};--gr:{{t.grid}};--tx:{{t.text}};--t2:{{t.text2}};--ac:{{t.accent}};--as:{{t.accentSoft}};--oa:{{t.onAccent}};--dg:{{t.danger}};--bo:{{t.bonus}}">
+
+<!-- PAUSE -->
+<sc-if value="{{s.pause}}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;left:0;top:0;width:390px;height:844px"><dc-import name="Game" scene="mid" theme="{{theme}}" hint-size="390px,844px"></dc-import></div>
+  <div style="position:absolute;left:0;top:0;width:390px;height:844px;background:{{scrim}}"></div>
+  <div style="flex:1"></div>
+  <div class="cd" style="position:relative;padding:22px 20px 16px;border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.28),inset 0 0 0 1px var(--gr);display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="cap">PAUSED</div><h1 class="ti" style="font-size:24px;line-height:30px">Level 27</h1><div class="cap" style="margin-top:2px">Chapter 4 · Warp</div></div><button class="ib" aria-label="Close" style="margin:-8px -8px 0 0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></button></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--bg);border-radius:14px;padding:12px 4px">
+      <div style="text-align:center"><div class="num" style="font-size:18px">01:12</div><div class="cap">Time</div></div>
+      <div style="text-align:center"><div class="num" style="font-size:18px">7<span style="color:var(--t2);font-size:13px"> / 24</span></div><div class="cap">Moves</div></div>
+      <div style="text-align:center"><div class="num" style="font-size:18px">0<span style="color:var(--t2);font-size:13px"> / 3</span></div><div class="cap">Hints used</div></div>
+    </div>
+    <button class="btn b1">Resume</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn b2" style="height:48px">Restart</button><button class="btn b2" style="height:48px">How to play</button></div>
+    <button class="btn b2" style="height:48px">Settings</button>
+    <button class="btn b3" style="height:44px;color:var(--t2)">Quit to levels</button>
+  </div>
+  <div style="height:8px"></div>
+</sc-if>
+
+<!-- COMPLETE -->
+<sc-if value="{{s.complete}}" hint-placeholder-val="{{ false }}">
+  <div style="height:48px;display:flex;align-items:center;justify-content:space-between"><div class="cap">LEVEL 27 · CHAPTER 4</div><button class="ib" aria-label="Close" style="margin-right:-8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></button></div>
+  <div style="text-align:center;padding-top:4px"><h1 class="ti" style="font-size:32px;line-height:38px">{{cp.title}}</h1><p class="bd" style="font-size:14px;line-height:20px;margin-top:4px">{{cp.sub}}</p></div>
+  <div style="display:flex;justify-content:center;gap:10px;padding:16px 0 12px">
+    <sc-for list="{{cp.stars}}" as="st" hint-placeholder-count="3"><svg width="{{st.sz}}" height="{{st.sz}}" viewBox="0 0 24 24" style="margin-top:{{st.mt}}px" fill="{{st.f}}" stroke="{{st.s}}" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 L14.8 9 L21 9.7 L16.4 14 L17.7 20.5 L12 17.3 L6.3 20.5 L7.6 14 L3 9.7 L9.2 9 Z"/></svg></sc-for>
+  </div>
+  <div style="display:flex;justify-content:center;padding-bottom:14px"><div style="box-shadow:0 0 0 7px var(--as);border-radius:20px"><dc-import name="Board" scene="done" size="{{cp.board}}" theme="{{theme}}" hint-size="190px,190px"></dc-import></div></div>
+  <div class="cd" style="padding:4px 18px">
+    <div class="row"><span style="color:var(--t2)">Time</span><span class="num">01:12 <span style="color:var(--t2);font:500 13px Figtree">· best 00:58</span></span></div>
+    <div class="row"><span style="color:var(--t2)">Moves</span><span class="num">{{cp.moves}} <span style="color:var(--t2);font:500 13px Figtree">· optimal 18</span></span></div>
+    <div class="row"><span style="color:var(--t2)">Bonus stars</span><span class="num">1 <span style="color:var(--t2);font:500 13px Figtree">of 2</span></span></div>
+  </div>
+  <sc-if value="{{cp.unlock}}">
+    <div class="cd" style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-top:12px;background:{{t.freeze}}1F;box-shadow:inset 0 0 0 1.5px {{t.freeze}}"><dc-import name="Cell" kind="freeze" state="active" size="48" theme="{{theme}}" hint-size="48px,48px"></dc-import><div style="flex:1"><div class="cap" style="color:var(--tx)">NEW MECHANIC UNLOCKED</div><div style="font:600 15px/20px Figtree">Freeze cells. Next chapter.</div></div><button class="btn b2" style="width:auto;height:40px;padding:0 14px;font-size:14px">Preview</button></div>
+  </sc-if>
+  <div style="flex:1"></div>
+  <button class="btn b1">Next level</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><button class="btn b2" style="height:48px">Retry</button><button class="btn b2" style="height:48px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 V15 M7.5 8.5 L12 4 L16.5 8.5 M5 13 V19 a1 1 0 0 0 1 1 H18 a1 1 0 0 0 1 -1 V13"/></svg>Share</button></div>
+</sc-if>
+
+<!-- SHARE CARD -->
+<sc-if value="{{s.share}}" hint-placeholder-val="{{ false }}">
+  <div style="height:48px;display:flex;align-items:center;margin-left:-8px"><button class="ib" aria-label="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button><span class="cap">SHARE RESULT</span></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+    <div style="width:330px;box-sizing:border-box;padding:24px;border-radius:28px;background:{{card.bg}};color:{{card.fg}};box-shadow:0 20px 50px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 64 64" fill="none" style="color:{{card.mark}}"><path d="M50 16 H26 Q18 16 18 24 V50 M34 34 H47" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="16" r="3.2" fill="{{card.bg}}"/></svg><span style="font:700 16px/20px Sora;letter-spacing:.08em">FLUX</span></div><span style="font:600 13px/16px Figtree;opacity:.8">Level 27 · Warp</span></div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:12px;border-radius:18px;background:{{card.plate}}">
+        <sc-for list="{{pix}}" as="q" hint-placeholder-count="36"><div style="aspect-ratio:1;border-radius:6px;background:{{q.c}}"></div></sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font:700 28px/32px Sora;letter-spacing:.1em;color:{{card.star}}">★★★</div><div style="font:600 14px/20px Figtree;margin-top:2px">18 moves · 01:12</div></div><div style="font:500 12px/16px Figtree;opacity:.75;text-align:right">Connect. Adapt. Solve.<br>No spoilers: numbers hidden</div></div>
+    </div>
+    <div class="cap">Exported as a 1080 × 1080 image</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn b2">Copy image</button><button class="btn b1">Share</button></div>
+</sc-if>
+
+<!-- FAILED -->
+<sc-if value="{{s.fail}}" hint-placeholder-val="{{ false }}">
+  <div style="height:48px;display:flex;align-items:center;justify-content:space-between"><div class="cap">LEVEL {{fl.level}}</div><button class="ib" aria-label="Close" style="margin-right:-8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></button></div>
+  <div style="padding-top:6px"><span class="chip" style="background:{{fl.tint}}2E">{{fl.tag}}</span><h1 class="ti" style="margin-top:10px">{{fl.title}}</h1><p class="bd" style="margin-top:6px">{{fl.body}}</p></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="box-shadow:0 0 0 2px {{fl.tint}};border-radius:22px;padding:0"><dc-import name="Board" scene="{{fl.scene}}" size="270" theme="{{theme}}" hint-size="270px,270px"></dc-import></div></div>
+  <div class="cd" style="display:flex;gap:12px;align-items:center;padding:12px 16px;margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:{{fl.tint}};flex:none"></span><span style="font:500 14px/20px Figtree">{{fl.tip}}</span></div>
+  <button class="btn b1">{{fl.primary}}</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><button class="btn b2" style="height:48px">Retry from start</button><button class="btn b2" style="height:48px">Use a hint · 2 left</button></div>
+</sc-if>
+
+<!-- DAILY -->
+<sc-if value="{{s.daily}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:48px"><button class="ib" aria-label="Back" style="margin-left:-8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button><div class="h3" style="font-size:17px">Daily challenge</div><div style="width:48px"></div></div>
+  <div style="display:flex;justify-content:space-between;gap:4px;padding:6px 0 14px">
+    <sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:44px"><span class="cap" style="font-size:11px">{{d.d}}</span><span style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font:700 14px/16px Sora;background:{{d.bg}};color:{{d.fg}};box-shadow:{{d.sh}}">{{d.n}}</span></div>
+    </sc-for>
+  </div>
+  <div class="cd" style="padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="cap" style="color:var(--ac)">SATURDAY 3 OCTOBER</div><div class="h3" style="margin-top:2px">{{dl.title}}</div></div><span class="chip">6 × 6</span></div>
+    <div style="display:flex;gap:16px;align-items:center">
+      <div style="opacity:{{dl.bop}}"><dc-import name="Board" scene="{{dl.scene}}" size="150" theme="{{theme}}" hint-size="150px,150px"></dc-import></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="font:500 14px/20px Figtree;color:var(--t2)">{{dl.line1}}</div><div class="num" style="font-size:24px">{{dl.big}}</div><div class="cap">{{dl.line2}}</div></div>
+    </div>
+    <button class="btn b1" style="height:52px">{{dl.cta}}</button>
+    <sc-if value="{{dl.done}}"><button class="btn b2" style="height:44px">Share result</button></sc-if>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 4px 6px"><span class="cap">NEXT PUZZLE IN</span><span class="num" style="font-size:18px">07:42:10</span></div>
+  <div class="cd" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1">
+    <div style="display:flex;justify-content:space-between"><span class="h3" style="font-size:15px">October</span><span class="cap">12-day streak · best 21</span></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+      <sc-for list="{{past}}" as="d" hint-placeholder-count="35"><div style="aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11px/12px Sora;background:{{d.bg}};color:{{d.fg}};box-shadow:{{d.sh}}">{{d.n}}</div></sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<!-- MODES -->
+<sc-if value="{{s.modes}}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;gap:4px;height:48px;margin-left:-8px"><button class="ib" aria-label="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button></div>
+  <div style="padding:2px 0 14px"><h1 class="ti">Modes</h1><p class="bd" style="font-size:14px;line-height:20px;margin-top:4px">Same board language, different pressure.</p></div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <sc-for list="{{modes}}" as="m" hint-placeholder-count="6">
+      <div class="cd" style="display:flex;align-items:center;gap:14px;padding:12px 14px;opacity:{{m.op}}">
+        <div style="width:48px;height:48px;border-radius:14px;background:{{m.tint}}26;display:flex;align-items:center;justify-content:center;flex:none"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{m.tint}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{m.icon}}"/></svg></div>
+        <div style="flex:1;min-width:0"><div style="font:700 17px/22px Sora">{{m.name}}</div><div style="font:400 13px/18px Figtree;color:var(--t2)">{{m.rule}}</div></div>
+        <div style="text-align:right;flex:none"><div class="num" style="font-size:15px">{{m.best}}</div><div class="cap" style="font-size:11px">{{m.cap}}</div></div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","default":"complete","options":["pause","complete","complete2","share","fail1","fail2","fail3","daily1","daily2","modes"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(dark) {
+    const L = {bg:'#F6F3EE',raised:'#FFFFFF',grid:'#DDD6CA',text:'#16161A',text2:'#5C5A57',accent:'#0B7F7A',accentSoft:'#D6EFEC',onAccent:'#FFFFFF',danger:'#C8372D',bonus:'#B37A00',tele:'#7A45D6',freeze:'#1E8FC9',dir:'#4A56D6',burn:'#D9641A',sw:'#C42E75',count:'#C8372D',rampA:'#1BA39A',rampB:'#0B5C86',plate:'#E9E3D8',warn:'#B7791F'};
+    const D = {bg:'#131210',raised:'#282621',grid:'#34312B',text:'#F2EEE6',text2:'#A9A397',accent:'#3FD1C4',accentSoft:'#123A37',onAccent:'#0A1F1E',danger:'#FF7468',bonus:'#FFC93D',tele:'#B592FF',freeze:'#6CC7F5',dir:'#8E98FF',burn:'#FF9A52',sw:'#FF7DB0',count:'#FF7468',rampA:'#3FD1C4',rampB:'#6FA8F5',plate:'#0E0D0C',warn:'#E0A73A'};
+    return dark ? D : L;
+  }
+  lerp(a, b, f) {
+    const h = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16));
+    const A = h(a), B = h(b);
+    return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join('');
+  }
+  renderVals() {
+    const p = this.props;
+    const dark = p.theme === 'dark';
+    const t = this.pal(dark);
+    const scr = p.screen || 'complete';
+    const s = { pause: scr === 'pause', complete: /^complete/.test(scr), share: scr === 'share', fail: /^fail/.test(scr), daily: /^daily/.test(scr), modes: scr === 'modes' };
+    const star = (n, sz) => [0, 1, 2].map((i) => ({ f: i < n ? t.bonus : 'none', s: i < n ? t.bonus : t.grid, sz: i === 1 ? 52 : 42, mt: i === 1 ? 0 : 10 }));
+    const cp = scr === 'complete2'
+      ? { title: 'Level solved', sub: 'Two stars. One shorter route exists.', stars: star(2), moves: '21', board: 150, unlock: true }
+      : { title: 'Perfect path', sub: 'Solved in the fewest possible moves.', stars: star(3), moves: '18', board: 190, unlock: false };
+    // share pixels
+    const NP = '00 01 02 03 04 05 15 25 24 23 22 32 33 34 44 43 53 52 51 50'.split(' ');
+    const idx = {}; NP.forEach((k, i) => { idx[k] = i; });
+    const card = dark ? { bg: '#1D1C19', fg: '#F2EEE6', plate: '#0E0D0C', mark: '#3FD1C4', star: '#FFC93D' } : { bg: '#FDFBF7', fg: '#16161A', plate: '#E9E3D8', mark: '#0B7F7A', star: '#B37A00' };
+    const pix = [];
+    for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) {
+      const k = r + '' + c;
+      pix.push({ c: idx[k] !== undefined ? this.lerp(t.rampA, t.rampB, idx[k] / 19) : (dark ? '#26241F' : '#F4EFE6') });
+    }
+    // failures
+    const F = {
+      fail1: { level: '27', tag: 'Out of moves', tint: t.warn, title: '24 of 24 moves used', body: 'One node short. Your route was close.', scene: 'near', tip: 'Undo the last 3 moves to get back on track.', primary: 'Undo 3 moves' },
+      fail2: { level: '53', tag: 'Countdown expired', tint: t.count, title: 'The countdown ran out', body: 'The cell reached 0 before the path crossed it.', scene: 'count', tip: 'Cross the 1 cell earlier. Try going through (2, 2) first.', primary: 'Undo to before the expiry' },
+      fail3: { level: '5', tag: 'Path trapped', tint: t.freeze, title: 'No valid move left', body: 'The head is boxed in by your own path and a wall.', scene: 'trap', tip: 'Undo 2 moves and leave room to turn.', primary: 'Undo 2 moves' }
+    };
+    const fl = F[scr] || F.fail1;
+    // daily
+    const done = scr === 'daily2';
+    const dl = done
+      ? { title: 'Solved. Nicely done.', scene: 'done', bop: 1, line1: 'Today', big: '★★★ 01:08', line2: '17 moves · 1 bonus star', cta: 'View solution replay', done: true }
+      : { title: 'Today’s puzzle', scene: 'mini', bop: 1, line1: 'Mixed mechanics · medium', big: 'Not started', line2: 'Everyone gets the same board', cta: 'Play today’s puzzle', done: false };
+    if (!done) dl.scene = 'mini';
+    const wd = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const week = wd.map((d, i) => {
+      const today = i === 5;
+      const solved = i < 5 || (today && done);
+      return { d, n: i < 3 ? 28 + i : i - 2, bg: solved ? t.accent : (today ? t.accentSoft : t.raised), fg: solved ? t.onAccent : t.text, sh: today ? 'inset 0 0 0 2px ' + t.accent : 'inset 0 0 0 1px ' + t.grid };
+    });
+    const past = [];
+    const solvedDays = { 1: 1, 2: 1, 3: 0, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1 };
+    for (let d = 1; d <= 31; d++) {
+      const future = d > 3, today = d === 3;
+      const solved = d < 3 || (today && done);
+      past.push({ n: d, bg: solved ? t.accent : t.plate, fg: solved ? t.onAccent : (future ? t.grid : t.text2), sh: today ? 'inset 0 0 0 2px ' + t.accent : 'none' });
+    }
+    for (let i = 0; i < 3; i++) past.unshift({ n: '', bg: 'transparent', fg: t.text2, sh: 'none' });
+    // modes
+    const M = [
+      { name: 'Classic', rule: 'Hand-built levels at your pace', best: '27 / 64', cap: 'levels solved', tint: t.accent, icon: 'M4 4 H10 V10 H4 Z M14 4 H20 V10 H14 Z M4 14 H10 V20 H4 Z M14 14 H20 V20 H14 Z', op: 1 },
+      { name: 'Daily', rule: 'One shared puzzle every day', best: '12 days', cap: 'current streak', tint: t.dir, icon: 'M5 6 H19 a1 1 0 0 1 1 1 V19 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 V7 a1 1 0 0 1 1 -1 Z M4 10 H20 M8 3 V7 M16 3 V7', op: 1 },
+      { name: 'Rush', rule: 'Solve as many as you can in 3:00', best: '14', cap: 'best solved', tint: t.burn, icon: 'M13 3 L5 13 H11 L10 21 L19 10 H13 Z', op: 1 },
+      { name: 'Chaos', rule: 'Random mechanics on every board', best: 'Soon', cap: 'coming soon', tint: t.tele, icon: 'M4 7 H8 L16 17 H20 M4 17 H8 L16 7 H20 M17 4 L20 7 L17 10 M17 14 L20 17 L17 20', op: 0.6 },
+      { name: 'Master', rule: 'Chapter 8 boards only, no hints', best: 'Locked', cap: 'finish chapter 7', tint: t.text, icon: 'M7 11 V8 a5 5 0 0 1 10 0 V11 M6 11 H18 a1 1 0 0 1 1 1 V19 a1 1 0 0 1 -1 1 H6 a1 1 0 0 1 -1 -1 V12 a1 1 0 0 1 1 -1 Z', op: 0.6 },
+      { name: 'Endless', rule: 'Boards grow. One mistake ends the run', best: '21', cap: 'best streak', tint: t.sw, icon: 'M12 12 C12 8 9 6 6.5 6 a3 3 0 0 0 0 6 C9 12 12 16 12 12 C12 16 15 18 17.5 18 a3 3 0 0 0 0 -6 C15 12 12 8 12 12', op: 1 }
+    ];
+    return { t, s, theme: p.theme || 'light', scrim: dark ? 'rgba(0,0,0,.62)' : 'rgba(22,22,26,.45)', cp, card, pix, fl, dl, week, past, modes: M };
+  }
+}
+</script>
+</body>
+</html>

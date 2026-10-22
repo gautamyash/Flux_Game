@@ -1,0 +1,16 @@
+
+# Nested Git backup
+app/.git-backup/
+
+# Dependencies
+app/node_modules/
+
+# Expo generated files
+app/.expo/
+app/dist/
+app/web-build/
+
+# Environment secrets
+.env
+.env.*
+!.env.example

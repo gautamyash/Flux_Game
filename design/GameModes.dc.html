@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game HUD variants</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.fr{display:flex;flex-direction:column;gap:8px;width:390px}
+.fr b{font:700 16px/20px Sora,sans-serif}
+.fr span{font:400 13px/18px Figtree,sans-serif;opacity:.75;min-height:36px}
+.ph{width:390px;height:844px;border-radius:36px;overflow:hidden}
+</style>
+</helmet>
+<div style="width:1920px;height:2420px;box-sizing:border-box;padding:64px;background:#EFEBE4;font-family:Figtree,sans-serif;color:#16161A;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="k">06b · Game HUD variants and hint flow</div>
+    <div style="font:700 36px/42px Sora,sans-serif;margin-top:6px;letter-spacing:-.02em">Modes change the HUD, never the board.</div>
+  </div>
+  <sc-for list="{{rows}}" as="r" hint-placeholder-count="2">
+    <div style="display:flex;flex-direction:column;gap:12px;background:{{r.bg}};padding:28px;margin:0 -28px;border-radius:28px;color:{{r.fg}}">
+      <div class="k">{{r.title}}</div>
+      <div style="display:flex;gap:40px">
+        <sc-for list="{{r.items}}" as="p" hint-placeholder-count="4"><div class="fr"><b>{{p.n}}</b><span>{{p.d}}</span><div class="ph" style="box-shadow:{{r.sh}}"><dc-import name="Game" scene="{{p.scene}}" mode="{{p.mode}}" lefty="{{p.lefty}}" theme="{{r.theme}}" hint-size="390px,844px"></dc-import></div></div></sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2420}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const items = [
+      { scene: 'mid', mode: 'rush', lefty: false, n: 'Rush HUD', d: 'Score replaces moves; a 62% timer bar sits under the HUD.' },
+      { scene: 'mid', mode: 'endless', lefty: false, n: 'Endless HUD', d: 'Streak counter and personal best; no move limit.' },
+      { scene: 'hint', mode: 'classic', lefty: false, n: 'Hint revealed', d: 'Next three cells outlined and pulsing; Hint badge shows 2 left.' },
+      { scene: 'fresh', mode: 'classic', lefty: true, n: 'Left-handed bar', d: 'Action bar mirrors; thumb reach stays under 48dp targets.' }
+    ];
+    return { rows: [
+      { title: 'Light', theme: 'light', bg: 'transparent', fg: '#16161A', sh: '0 0 0 1px #DDD6CA,0 24px 48px rgba(60,45,20,.16)', items },
+      { title: 'Dark', theme: 'dark', bg: '#0B0A09', fg: '#F2EEE6', sh: '0 0 0 1px #34312B,0 24px 48px rgba(0,0,0,.5)', items }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

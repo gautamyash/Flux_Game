@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game frames 1 to 5</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k{font:600 12px/16px Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#0B7F7A}
+.fr{display:flex;flex-direction:column;gap:6px;width:390px}
+.fr b{font:700 17px/22px Sora,sans-serif}
+.fr span{font:400 14px/20px Figtree,sans-serif;color:#4A4845;min-height:40px}
+.ph{width:390px;height:844px;border-radius:36px;overflow:hidden;box-shadow:0 0 0 1px #DDD6CA,0 24px 48px rgba(60,45,20,.16)}
+</style>
+</helmet>
+<div style="width:2270px;height:1180px;box-sizing:border-box;padding:64px;background:#EFEBE4;font-family:Figtree,sans-serif;color:#16161A;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="k">Game screen · frames 1 to 5 · light · 390 × 844</div>
+    <div style="font:700 36px/42px Sora,sans-serif;margin-top:6px;letter-spacing:-.02em">The board leads. Everything else stays at the edges.</div>
+  </div>
+  <div style="display:flex;gap:48px;align-items:flex-start">
+    <div class="fr"><b>1 · Fresh level</b><span>6 × 6, nodes 1 to 5. Node 1 carries the origin ring and pulses as the first target.</span>
+      <div class="ph"><dc-import name="Game" scene="fresh" theme="light" hint-size="390px,844px"></dc-import></div></div>
+    <div class="fr"><b>2 · Mid-drag</b><span>Path follows the finger. Active run is brighter with a halo, head cursor ring, next node 3 pulses.</span>
+      <div class="ph"><dc-import name="Game" scene="mid" theme="light" hint-size="390px,844px"></dc-import></div></div>
+    <div class="fr"><b>3 · Teleport</b><span>Entry portal filled, exit portal bursts. A dashed violet warp bridge links the two path segments.</span>
+      <div class="ph"><dc-import name="Game" scene="tele" theme="light" hint-size="390px,844px"></dc-import></div></div>
+    <div class="fr"><b>4 · Burn cell</b><span>Head sits on a burning cell. The cell behind it is already charred and blocked. Warning in the feedback line.</span>
+      <div class="ph"><dc-import name="Game" scene="burn" theme="light" hint-size="390px,844px"></dc-import></div></div>
+    <div class="fr"><b>5 · Freeze activated</b><span>Eight neighbours carry a frost overlay and a lock corner. The frozen node 2 cannot be reached yet.</span>
+      <div class="ph"><dc-import name="Game" scene="freeze" theme="light" hint-size="390px,844px"></dc-import></div></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2270,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
