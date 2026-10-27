@@ -1,3 +1,4 @@
+
 name: Publish EAS Update
 
 on:
@@ -10,6 +11,7 @@ on:
           - preview
           - production
         required: true
+        default: preview
       message:
         description: Release note for this update
         type: string
@@ -27,12 +29,18 @@ jobs:
     if: inputs.channel == 'preview' || (inputs.channel == 'production' && github.ref == 'refs/heads/main')
     name: Publish Android ${{ inputs.channel }} update
     runs-on: ubuntu-latest
+
     environment:
       name: ${{ inputs.channel == 'production' && 'production' || 'preview' }}
+
     defaults:
       run:
         working-directory: app
+
     steps:
+      - name: Check out selected commit
+        uses: actions/checkout@v5
+
       - name: Check Expo access token
         shell: bash
         env:
@@ -42,9 +50,6 @@ jobs:
             echo "::error::Add EXPO_TOKEN as a GitHub Actions secret before publishing updates."
             exit 1
           fi
-
-      - name: Check out selected commit
-        uses: actions/checkout@v5
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -68,10 +73,10 @@ jobs:
           CHANNEL: ${{ inputs.channel }}
           EAS_ENVIRONMENT: ${{ inputs.channel == 'production' && 'production' || 'preview' }}
           UPDATE_MESSAGE: ${{ inputs.message }}
-        run: >-
-          eas update
-          --channel "$CHANNEL"
-          --message "$UPDATE_MESSAGE"
-          --environment "$EAS_ENVIRONMENT"
-          --platform android
-          --non-interactive
+        run: |
+          eas update \
+            --channel "$CHANNEL" \
+            --message "$UPDATE_MESSAGE" \
+            --environment "$EAS_ENVIRONMENT" \
+            --platform android \
+            --non-interactive
