@@ -123,7 +123,7 @@ export interface AppState {
 
 export const ENERGY_MAX = 5;
 export const ENERGY_COST_PER_RUN = 1;
-export const ENERGY_REFILL_MS = 3 * 60 * 60 * 1000;
+export const ENERGY_REFILL_MS = 30 * 60 * 1000;
 export const HINTS_MAX = 3;
 export const HINTS_REFILL_MS = 24 * 60 * 60 * 1000;
 
