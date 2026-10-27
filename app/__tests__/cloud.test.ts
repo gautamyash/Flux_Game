@@ -2,7 +2,8 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 jest.mock('expo-notifications', () => ({}));
 
 import { mergeSync, sameSync, toSyncData, SyncData } from '../src/cloud/merge';
-import { migrate } from '../src/store/store';
+import { applyCloud, beginEnergyRun, getState, loadStore, migrate, saveResume } from '../src/store/store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const base = (): SyncData => toSyncData(migrate({ onboarded: true }));
 const withLevels = (levels: SyncData['levels'], extra: Partial<SyncData> = {}): SyncData => ({ ...base(), levels, ...extra });
@@ -15,6 +16,15 @@ describe('mergeSync', () => {
     const m = mergeSync(guest, cloud, false);
     expect(Object.keys(m.levels).sort()).toEqual(['1-1', '1-2', '1-3']);
     expect(m.levels['1-1']).toMatchObject({ stars: 3, moves: 5, time: 40 });
+  });
+
+  test('guest-ahead and cloud-ahead progress both survive the merge', () => {
+    const guestAhead = withLevels({ '1-1': rec(3), '1-2': rec(2), '1-3': rec(1) });
+    const oldCloud = withLevels({ '1-1': rec(1) });
+    const cloudAhead = withLevels({ '1-1': rec(3), '1-2': rec(2), '1-3': rec(1), '1-4': rec(3) });
+    const newerPhone = withLevels({ '1-1': rec(2) });
+    expect(Object.keys(mergeSync(guestAhead, oldCloud, false).levels)).toHaveLength(3);
+    expect(Object.keys(mergeSync(newerPhone, cloudAhead, false).levels)).toHaveLength(4);
   });
 
   test('is symmetric for progress (order does not matter)', () => {
@@ -66,6 +76,31 @@ describe('mergeSync', () => {
     expect(sameSync(a, { ...a, updatedAt: a.updatedAt + 5, clockMax: 1 })).toBe(true);
     expect(sameSync(a, withLevels({ '1-1': rec(1) }))).toBe(false);
   });
+
+  test('merge is idempotent across a retried sync', () => {
+    const guest = withLevels({ '1-1': rec(3), '1-2': rec(1) }, { achievements: { first: 123 } });
+    const cloud = withLevels({ '1-1': rec(2), '1-3': rec(2) }, { achievements: { first: 200, cloud: 150 } });
+    const first = mergeSync(guest, cloud, false);
+    const retry = mergeSync(first, first, true);
+    expect(sameSync(first, retry)).toBe(true);
+    expect(retry.levels).toHaveProperty('1-3');
+    expect(retry.achievements).toHaveProperty('cloud');
+  });
+});
+
+test('applying a cloud merge leaves the active puzzle, run identity, and local energy untouched', async () => {
+  await AsyncStorage.clear();
+  await loadStore();
+  saveResume({ runId: 'active-run-123', source: { mode: 'classic' } as never, levelId: '1-1', day: '', entered: [1, 2], seconds: 20, hints: 1, savedAt: 20 });
+  beginEnergyRun('active-run-123', 1000);
+  const before = getState();
+  applyCloud({ levels: { '1-1': rec(3) }, stats: { ...before.stats, solvedAny: 1 } });
+  const after = getState();
+  expect(after.resume).toEqual(before.resume);
+  expect(after.activeRunId).toBe(before.activeRunId);
+  expect(after.energy).toBe(before.energy);
+  expect(after.energyRefillStartedAt).toBe(before.energyRefillStartedAt);
+  expect(after.levels['1-1'].stars).toBe(3);
 });
 
 describe('login mode in saved data', () => {
@@ -77,4 +112,12 @@ describe('login mode in saved data', () => {
     expect(g.mode).toBe('google');
     expect(g.account?.uid).toBe('u1');
   });
+});
+
+test('energy and daily hint charges remain device-local and are excluded from cloud sync', () => {
+  const data = toSyncData(migrate({ energy: 2, energyRefillStartedAt: 1234, hintsRemaining: 1, hintsRefillStartedAt: 5678 }));
+  expect(data).not.toHaveProperty('energy');
+  expect(data).not.toHaveProperty('energyRefillStartedAt');
+  expect(data).not.toHaveProperty('hintsRemaining');
+  expect(data).not.toHaveProperty('hintsRefillStartedAt');
 });

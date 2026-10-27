@@ -6,13 +6,22 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "updates": {
+      "url": "https://u.expo.dev/ea1cdcd9-460f-4022-a2f9-b08ddb4057b5",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vaibhav.flux"
+      "bundleIdentifier": "com.gautamyash.flux"
     },
     "android": {
-      "package": "com.vaibhav.flux",
+      "package": "com.gautamyash.flux",
       "adaptiveIcon": {
         "backgroundColor": "#0B7F7A",
         "foregroundImage": "./assets/android-icon-foreground.png",

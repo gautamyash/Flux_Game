@@ -8,23 +8,26 @@ import {
 import { boardGeom, cellAt, cellCenter } from '../../components/Board';
 import { GameSource, useNav } from '../../nav/Nav';
 import { dailyLevel, chaosLevel, endlessLevel, practiceLevel, rushLevel } from '../../lib/procedural';
-import { getLevel, mechanicsOf, nextLevelId, MECH_INTRO, Mech } from '../../lib/levels';
+import { campaignComplete, campaignLevelNumber, getLevel, mechanicsOf, newlyUnlockedCampaignWorld, nextCampaignLevelId, nextLevelId, MECH_INTRO, Mech } from '../../lib/levels';
 import { evaluateAchievements } from '../../lib/achievements';
 import { haptic } from '../../lib/haptics';
 import { sfx } from '../../lib/sound';
+import { submitDailyRun, submitGlobalRun } from '../../cloud/leaderboards';
+import type { SubmissionResult } from '../../cloud/leaderboards';
 import {
-  SolveOutcome, dateKey, getState, markSeen, saveResume, recordClassicSolve, recordDailySolve, recordHint,
-  recordOtherSolve, recordRunBest, setLastLevel, setOnboarded, useSettings,
+  HINTS_MAX, HINTS_REFILL_MS, SolveOutcome, adoptSavedRun, beginEnergyRun, dateKey, getState, isRunActive, markSeen, refreshHints, saveResume, recordClassicSolve, recordDailySolve, recordHint,
+  recordOtherSolve, recordRunBest, setLastLevel, setOnboarded, spendHint, trustedNow, useSettings, useStore,
 } from '../../store/store';
 
 export const RUSH_SECONDS = 180;
-export const MAX_HINTS = 3;
+export const MAX_HINTS = HINTS_MAX;
 
-function resolveLevel(source: GameSource, index: number, nonce: number): Level {
+function resolveLevel(source: GameSource, index: number, nonce: number, dailyDay?: string): Level {
   switch (source.kind) {
     case 'classic': return getLevel(source.levelId);
     case 'master': return getLevel(source.levelId ?? '8-1');
-    case 'daily': return dailyLevel(dateKey());
+    case 'campaign': return getLevel(source.levelId);
+    case 'daily': return dailyLevel(dailyDay ?? dateKey());
     case 'rush': return rushLevel(index, nonce);
     case 'endless': return endlessLevel(index, nonce);
     case 'chaos': return chaosLevel(index, nonce);
@@ -41,14 +44,21 @@ export interface ResultData {
   bonus: boolean;
   outcome: SolveOutcome | null;
   streak: number | null;
+  campaignWorldUnlocked?: string | null;
+  campaignComplete?: boolean;
 }
 
-export function useGame(source: GameSource) {
+export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const nav = useNav();
   const settings = useSettings();
   const nonce = useRef(Date.now() % 100000).current;
+  const savedRun = getState().resume;
+  const initialRunDay = source.kind === 'daily'
+    ? dailyDay || (savedRun?.runId === runId ? savedRun.day : '') || dateKey()
+    : undefined;
+  const runDay = useRef(initialRunDay).current;
   const [index, setIndex] = useState(1);
-  const level = useMemo(() => resolveLevel(source, index, nonce), [source, index, nonce]);
+  const level = useMemo(() => resolveLevel(source, index, nonce, runDay), [source, index, nonce, runDay]);
 
   const [session, setSession] = useState<Session>(() => createSession(level));
   const sessRef = useRef(session);
@@ -58,6 +68,9 @@ export function useGame(source: GameSource) {
   const [errCell, setErrCell] = useState<number | null>(null);
   const [hintCells, setHintCells] = useState<number[]>([]);
   const [hintsUsed, setHintsUsed] = useState(0);
+  const hintsRemaining = useStore((s) => s.hintsRemaining);
+  const hintsRefillStartedAt = useStore((s) => s.hintsRefillStartedAt);
+  const [hintsNow, setHintsNow] = useState(trustedNow());
   const secRef = useRef(0);
   const leftRef = useRef(RUSH_SECONDS);
   const [rushOver, setRushOver] = useState(false);
@@ -71,6 +84,19 @@ export function useGame(source: GameSource) {
   const [badgeToast, setBadgeToast] = useState<string[]>([]);
   const [runOver, setRunOver] = useState<{ score: number; best: number } | null>(null);
   const [score, setScore] = useState(0);
+  const [energyDenied, setEnergyDenied] = useState(false);
+  const [leaderboardSubmission, setLeaderboardSubmission] = useState<SubmissionResult | 'pending' | null>(null);
+  const leaderboardTask = useRef<(() => Promise<SubmissionResult>) | null>(null);
+  const completedPuzzle = useRef<string | null>(null);
+
+  const sendLeaderboardSubmission = useCallback((task: () => Promise<SubmissionResult>) => {
+    leaderboardTask.current = task;
+    setLeaderboardSubmission('pending');
+    void task().then(setLeaderboardSubmission).catch(() => setLeaderboardSubmission('error'));
+  }, []);
+  const retryLeaderboardSubmission = useCallback(() => {
+    if (leaderboardTask.current) sendLeaderboardSubmission(leaderboardTask.current);
+  }, [sendLeaderboardSubmission]);
 
   const shake = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -90,6 +116,21 @@ export function useGame(source: GameSource) {
 
   const clearHints = useCallback(() => setHintCells((h) => (h.length ? [] : h)), []);
 
+  useEffect(() => {
+    if (hintsRefillStartedAt === null) return;
+    const tick = () => {
+      refreshHints();
+      if (hintsRemaining === 0) setHintsNow(trustedNow());
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [hintsRefillStartedAt, hintsRemaining]);
+
+  const hintRefillMs = hintsRemaining > 0 || hintsRefillStartedAt === null
+    ? null
+    : Math.max(0, HINTS_REFILL_MS - (hintsNow - hintsRefillStartedAt));
+
   const say = useCallback((text: string, tone: 'info' | 'bad' | 'good' = 'info') => {
     setFeedback({ text, tone });
     if (fbTimer.current) clearTimeout(fbTimer.current);
@@ -101,8 +142,8 @@ export function useGame(source: GameSource) {
     let sess = createSession(level);
     let restored = false;
     const rs = getState().resume;
-    const canResume = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily';
-    if (canResume && rs && rs.levelId === level.id && (source.kind !== 'daily' || rs.day === dateKey())) {
+    const canResume = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily' || source.kind === 'campaign';
+    if (canResume && rs && (!rs.runId || rs.runId === runId) && rs.levelId === level.id && (source.kind !== 'daily' || rs.day === runDay)) {
       for (const c of rs.entered) {
         const m = sessionMove(sess, c);
         if (!m.result.ok) break;
@@ -112,7 +153,10 @@ export function useGame(source: GameSource) {
       if (!restored) sess = createSession(level);
     }
     apply(sess);
+    if (restored && rs?.runId === '') { adoptSavedRun(runId); setEnergyDenied(false); }
+    else setEnergyDenied(!beginEnergyRun(runId));
     clearHints(); setHintsUsed(restored ? (rs?.hints ?? 0) : 0); secRef.current = restored ? (rs?.seconds ?? 0) : 0; setStarted(restored); setFailView(false);
+    setLeaderboardSubmission(null); leaderboardTask.current = null;
     if (restored) say('Welcome back. Your puzzle was saved right where you left it.', 'good');
     setResult(null); setFeedback(null); setErrCell(null);
     sweep.value = 2;
@@ -123,7 +167,7 @@ export function useGame(source: GameSource) {
       if (!seen['mech:' + m]) { setIntro(m); markSeen('mech:' + m); break; }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level]);
+  }, [level, runId, runDay]);
 
   // timers
   useEffect(() => {
@@ -147,19 +191,19 @@ export function useGame(source: GameSource) {
   }, [timed, rushOver, runOver, score]);
 
   // keep an unfinished puzzle on disk so the player can resume it later (also after the app is closed)
-  const resumable = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily';
+  const resumable = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily' || source.kind === 'campaign';
   const hintsRef = useRef(0);
   hintsRef.current = hintsUsed;
   const persistResume = useCallback(() => {
-    if (!resumable) return;
+    if (!resumable || !isRunActive(runId)) return;
     const cur = current(sessRef.current);
     const entered = enteredCells(level, cur);
     if (cur.status !== 'playing' || entered.length === 0) {
       if (getState().resume?.levelId === level.id) saveResume(null);
       return;
     }
-    saveResume({ source, levelId: level.id, day: dateKey(), entered, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
-  }, [resumable, level, source]);
+    saveResume({ runId, source, levelId: level.id, day: runDay ?? dateKey(), entered, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
+  }, [resumable, level, source, runId, runDay]);
   useEffect(() => { persistResume(); }, [session, persistResume]);
   useEffect(() => () => persistResume(), [persistResume]);
   useEffect(() => {
@@ -175,6 +219,9 @@ export function useGame(source: GameSource) {
   }, [settings.reduceMotion, shake]);
 
   const onSolved = useCallback((fin: GameState) => {
+    const completionKey = `${runId}:${level.id}:${index}`;
+    if (completedPuzzle.current === completionKey) return;
+    completedPuzzle.current = completionKey;
     if (getState().resume?.levelId === level.id) saveResume(null);
     haptic('success'); sfx('solve');
     sweep.value = 2;
@@ -184,14 +231,30 @@ export function useGame(source: GameSource) {
     const info = { moves: fin.moves, time: secRef.current, hints: hintsUsed, bonus: fin.bonuses.length > 0, stars };
     let outcome: SolveOutcome | null = null;
     let streak: number | null = null;
+    let campaignWorldUnlocked: string | null = null;
+    let campaignFinished = false;
     let ach: string[] = [];
     if (source.kind === 'practice') {
       setOnboarded();
       setTimeout(() => nav.reset({ name: 'home' }), 900);
       return;
     }
-    if (source.kind === 'classic' || source.kind === 'master') outcome = recordClassicSolve(level, info, evaluateAchievements);
-    else if (source.kind === 'daily') { outcome = recordDailySolve(level, dateKey(), info, evaluateAchievements); streak = getState().stats.streak; }
+    if (source.kind === 'classic' || source.kind === 'master') {
+      outcome = recordClassicSolve(level, info, evaluateAchievements);
+      sendLeaderboardSubmission(() => submitGlobalRun(runId));
+    } else if (source.kind === 'campaign') {
+      const before = getState().levels;
+      outcome = recordClassicSolve(level, info, evaluateAchievements);
+      campaignWorldUnlocked = newlyUnlockedCampaignWorld(before, getState().levels)?.name ?? null;
+      campaignFinished = outcome.firstSolve && campaignComplete(getState().levels);
+      sendLeaderboardSubmission(() => submitGlobalRun(runId));
+    }
+    else if (source.kind === 'daily') {
+      const day = runDay ?? dateKey();
+      outcome = recordDailySolve(level, day, info, evaluateAchievements);
+      streak = getState().stats.streak;
+      sendLeaderboardSubmission(() => submitDailyRun(day, runId, { stars: info.stars, moves: info.moves, time: info.time }));
+    }
     else ach = recordOtherSolve(level, info, evaluateAchievements);
     if (outcome) ach = outcome.newAchievements;
     if (ach.length) { setBadgeToast(ach); setTimeout(() => sfx('badge'), 1200); }
@@ -200,8 +263,8 @@ export function useGame(source: GameSource) {
       setTimeout(() => setIndex((i) => i + 1), 700);
       return;
     }
-    setTimeout(() => setResult({ hints: hintsUsed, stars, badges: ach, moves: fin.moves, time: secRef.current, bonus: info.bonus, outcome, streak }), 900);
-  }, [level, hintsUsed, source, settings.reduceMotion, nav, sweep]);
+    setTimeout(() => setResult({ hints: hintsUsed, stars, badges: ach, moves: fin.moves, time: secRef.current, bonus: info.bonus, outcome, streak, campaignWorldUnlocked, campaignComplete: campaignFinished }), 900);
+  }, [level, hintsUsed, source, settings.reduceMotion, nav, sweep, runId, index, runDay, sendLeaderboardSubmission]);
 
   const onFailed = useCallback((fin: GameState) => {
     haptic('error'); sfx('fail');
@@ -385,20 +448,24 @@ export function useGame(source: GameSource) {
 
   const hint = useCallback(() => {
     if (st.status !== 'playing') return;
-    if (hintsUsed >= MAX_HINTS) { setHintLimit(true); return; }
     const h = hintFor(level, st);
     if (!h || !h.cells.length) { say('No hint available here. Try undoing a few steps.', 'info'); return; }
+    if (!spendHint()) { setHintLimit(true); return; }
     if (h.undo) say('This path cannot finish. Undo to the highlighted cells and go that way.', 'info');
     setHintCells(h.cells); sfx('hint');
     setHintsUsed((n) => n + 1);
     recordHint();
-  }, [st, hintsUsed, level, say]);
+  }, [st, level, say]);
 
   const goNext = useCallback(() => {
     if (source.kind === 'classic' || source.kind === 'master') {
       const nx = nextLevelId(level.id);
-      if (nx) nav.replace({ name: 'game', source: { kind: 'classic', levelId: nx } });
+      if (nx) nav.replaceGame({ kind: 'classic', levelId: nx });
       else nav.reset({ name: 'home' });
+    } else if (source.kind === 'campaign') {
+      const nx = nextCampaignLevelId(level.id);
+      if (nx && campaignLevelNumber(nx) > 0) nav.replaceGame({ kind: 'campaign', levelId: nx });
+      else nav.reset({ name: 'campaign' });
     } else if (source.kind === 'chaos') {
       setResult(null); setIndex((i) => i + 1);
     } else nav.reset({ name: 'home' });
@@ -407,10 +474,11 @@ export function useGame(source: GameSource) {
   const intros = intro ? MECH_INTRO[intro] : null;
 
   return {
-    level, session, st, feedback, errCell, hintCells, hintsUsed, paused, setPaused,
-    confirmRestart, setConfirmRestart, hintLimit, setHintLimit, result, failView, setFailView,
+    level, runDay, session, st, feedback, errCell, hintCells, hintsUsed, paused, setPaused,
+    confirmRestart, setConfirmRestart, hintLimit, setHintLimit, hintRefillMs, hintsRemaining, result, failView, setFailView,
     intro: intros, closeIntro: () => setIntro(null), badgeToast, clearToast: () => setBadgeToast([]),
-    runOver, score, timed, getSeconds: () => secRef.current, getRushLeft: () => leftRef.current, shake, pulse, sweep, started,
+    leaderboardSubmission, retryLeaderboardSubmission,
+    runOver, score, timed, getSeconds: () => secRef.current, getRushLeft: () => leftRef.current, shake, pulse, sweep, started, energyDenied,
     setBoardSize, onBegin, onMove, onEnd, tapCell, undo, doRestart, hint, goNext, overlayOpen, source,
   };
 }

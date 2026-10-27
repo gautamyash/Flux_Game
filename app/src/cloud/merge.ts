@@ -1,5 +1,5 @@
 import type { AppState, DailyRecord, LevelRecord, Stats } from '../store/store';
-import { LEVEL_DEFS } from '../lib/levels';
+import { ALL_LEVEL_DEFS } from '../lib/levels';
 
 /** Everything that follows a Google account. Device-only things (resume snapshot, login mode, clock) stay out. */
 export interface SyncData {
@@ -36,7 +36,7 @@ export function toSyncData(s: AppState): SyncData {
   };
 }
 
-const levelOrder = (id: string | null) => (id ? LEVEL_DEFS.findIndex((d) => d.id === id) : -1);
+const levelOrder = (id: string | null) => (id ? ALL_LEVEL_DEFS.findIndex((d) => d.id === id) : -1);
 
 const minPos = (a: number, b: number) => (a > 0 && b > 0 ? Math.min(a, b) : a || b);
 

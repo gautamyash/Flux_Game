@@ -17,7 +17,7 @@ eas login
 eas build:configure
 eas build -p android --profile production   # produces .aab
 ```
-Replace `assets/icon.png` and the adaptive-icon files with final artwork first. Package id: `com.vaibhav.flux` (change in app.json if needed).
+Replace `assets/icon.png` and the adaptive-icon files with final artwork first. Android package id: `com.gautamyash.flux`.
 
 ## Status
 Done: engine + hint solver, 100 levels (open 4x4 to 8x8 boards, chapters add mechanics), all modes, 15 screens, themes, 29 badges, stats, offline save.

@@ -9,7 +9,7 @@ import { useFonts, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sor
 import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
 import { NavProvider, Route, useNav } from './src/nav/Nav';
 import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
-import { flushStore, getState, loadStore, saveResume, touchActive, useStore } from './src/store/store';
+import { flushStore, getState, loadStore, refreshEnergy, refreshHints, saveResume, touchActive, useStore } from './src/store/store';
 import { Notifications, refreshNotifications, routeFromResponse } from './src/lib/notifications';
 import { setMusic } from './src/lib/sound';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
@@ -24,6 +24,8 @@ import { ChapterIntroScreen, ChaptersScreen, LevelsScreen } from './src/screens/
 import { DailyScreen, ModesScreen } from './src/screens/Modes';
 import { AchievementsScreen, CellsScreen, HowToScreen, StatsScreen } from './src/screens/Info';
 import { SettingsScreen, ThemesScreen } from './src/screens/Settings';
+import { LeaderboardScreen } from './src/screens/Leaderboard';
+import { CampaignScreen } from './src/screens/Campaign';
 
 let lastHandled = '';
 /** opens the right screen when a reminder is tapped (also when it cold-started the app) */
@@ -38,7 +40,7 @@ function NotifRouter() {
       setTimeout(() => {
         const rs = getState().resume;
         if (route === 'daily') nav.push({ name: 'daily' });
-        else if (route === 'resume' && rs) nav.push({ name: 'game', source: rs.source });
+        else if (route === 'resume' && rs) nav.startGame(rs.source, rs.runId || undefined, rs.day);
       }, delay);
     };
     const last = Notifications.getLastNotificationResponse();
@@ -58,8 +60,10 @@ function renderRoute(r: Route): React.ReactNode {
     case 'chapters': return <ChaptersScreen />;
     case 'levels': return <LevelsScreen chapter={r.chapter} />;
     case 'intro': return <ChapterIntroScreen chapter={r.chapter} />;
-    case 'game': return <GameScreen source={r.source} />;
+    case 'game': return <GameScreen source={r.source} runId={r.runId} dailyDay={r.dailyDay} />;
     case 'daily': return <DailyScreen />;
+    case 'leaderboard': return <LeaderboardScreen kind={r.kind} />;
+    case 'campaign': return <CampaignScreen />;
     case 'modes': return <ModesScreen />;
     case 'howto': return <HowToScreen />;
     case 'cells': return <CellsScreen />;
@@ -101,10 +105,11 @@ export default function App() {
       startSync();
     });
     const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') { refreshEnergy(); refreshHints(); }
       if (next === 'background' || next === 'inactive') {
         touchActive();
         void refreshNotifications();
-        void flushStore();
+        void flushStore().catch(() => {});
       }
     });
     return () => sub.remove();

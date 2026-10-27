@@ -23,8 +23,18 @@ export function ModesScreen() {
     <Screen>
       <TopBar title="Modes" onBack={nav.pop} />
       <ScrollView contentContainerStyle={{ gap: 10, paddingVertical: 8 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Campaign, fifty worlds and two hundred fifty levels" onPress={() => nav.push({ name: 'campaign' })}>
+          <Card style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }} bg={t.accentSoft} borderColor={t.accent}>
+            <Icon name="star" size={30} color={t.accent} />
+            <View style={{ flex: 1 }}>
+              <T v="title">Campaign</T>
+              <T v="cap">50 worlds Â· 250 levels Â· save the FLUX</T>
+            </View>
+            <Icon name="chevron" size={22} color={t.accent} />
+          </Card>
+        </Pressable>
         {items.map((m) => (
-          <Pressable key={m.name} disabled={m.locked} accessibilityRole="button" onPress={() => nav.push({ name: 'game', source: m.src })}>
+          <Pressable key={m.name} disabled={m.locked} accessibilityRole="button" onPress={() => nav.startGame(m.src)}>
             <Card style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: m.locked ? 0.5 : 1 }}>
               <Icon name={m.icon} size={30} color={t.accent} />
               <View style={{ flex: 1 }}>
@@ -50,7 +60,7 @@ export function DailyScreen() {
   const lv = dailyLevel(key);
   return (
     <Screen>
-      <TopBar title="Daily Puzzle" sub={new Date().toDateString()} onBack={nav.pop} />
+      <TopBar title="Daily Puzzle" sub={`UTC ${key}`} onBack={nav.pop} />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         <Icon name="calendar" size={64} color={t.accent} />
         <T v="h1">{rec ? 'Done for today' : `${lv.size}×${lv.size} puzzle`}</T>
@@ -59,7 +69,8 @@ export function DailyScreen() {
         ) : <T v="body" align="center">Same puzzle for everyone, new every day.</T>}
         <T v="small">Streak {stats.streak} · best {stats.longestStreak}</T>
       </View>
-      <Button label={rec ? 'Play again' : 'Play today’s puzzle'} onPress={() => nav.push({ name: 'game', source: { kind: 'daily' } })} />
+      <Button label="Daily leaderboard" icon="trophy" variant="secondary" onPress={() => nav.push({ name: 'leaderboard', kind: 'daily' })} />
+      <Button label={rec ? 'Play again' : 'Play today’s puzzle'} onPress={() => nav.startGame({ kind: 'daily' })} />
     </Screen>
   );
 }

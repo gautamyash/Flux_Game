@@ -30,14 +30,26 @@ export function AccountCard() {
     const r = await loginWithGoogle();
     setBusy(false);
     if (!r.ok && !r.cancelled) setMsg(r.error);
-    else if (r.ok) setMsg('Signed in. Your progress is now saved to your Google account.');
+    else if (r.ok) setMsg(r.warning ?? 'Google sign-in complete. Your merged progress is saved to your account.');
   };
-  const doOut = async () => { setConfirm(null); setBusy(true); await logout(); setBusy(false); nav.reset({ name: 'login' }); };
+  const doSync = async () => {
+    setBusy(true); setMsg('');
+    const r = await syncNow();
+    setBusy(false);
+    setMsg(r.ok ? 'Progress merge confirmed and saved to your Google account.' : r.error);
+  };
+  const doOut = async () => {
+    setConfirm(null); setBusy(true);
+    const r = await logout();
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error); return; }
+    nav.reset({ name: 'login' });
+  };
   const doDelete = async () => {
     setConfirm(null); setBusy(true);
-    const ok = await deleteAccount();
+    const result = await deleteAccount();
     setBusy(false);
-    if (ok) nav.reset({ name: 'login' }); else setMsg('Could not delete your cloud data. Check your connection and try again.');
+    if (result.ok) nav.reset({ name: 'login' }); else setMsg(result.error);
   };
 
   const statusText = sync.state === 'syncing' ? 'Syncing…'
@@ -54,8 +66,9 @@ export function AccountCard() {
           <T v="small">{account.email}</T>
           <T v="cap" color={sync.state === 'offline' || sync.state === 'needs-login' ? t.danger : t.success}>{statusText}</T>
           <T v="cap">Your progress is saved to this account and follows you to any phone.</T>
+          <T v="cap">Energy is saved on this device and does not sync between phones.</T>
           <View style={{ gap: 8 }}>
-            {sync.state === 'needs-login' ? <Button label="Sign in again" height={48} onPress={() => void signIn()} disabled={busy} /> : <Button label="Sync now" variant="secondary" height={48} onPress={() => void syncNow()} disabled={busy || sync.state === 'syncing'} />}
+            {sync.state === 'needs-login' ? <Button label="Sign in again" height={48} onPress={() => void signIn()} disabled={busy} /> : <Button label="Sync now" variant="secondary" height={48} onPress={() => void doSync()} disabled={busy || sync.state === 'syncing'} />}
             <Button label="Sign out" variant="ghost" height={44} onPress={() => setConfirm('out')} disabled={busy} />
             <Button label="Delete my cloud data" variant="ghost" height={44} onPress={() => setConfirm('delete')} disabled={busy} />
           </View>
@@ -64,7 +77,7 @@ export function AccountCard() {
         <>
           <T v="title">Guest</T>
           <T v="small">{GUEST_NOTE}</T>
-          <Button label="Sign in with Google to save progress" height={48} onPress={() => void signIn()} disabled={busy} />
+          <Button label="Sign in with Google to save progress and join leaderboards" height={48} onPress={() => void signIn()} disabled={busy} />
           {!cloudConfigured() ? <T v="cap">Google sign-in is not set up in this build yet.</T> : <T v="cap">Your current progress will be added to your account.</T>}
         </>
       )}
@@ -77,7 +90,7 @@ export function AccountCard() {
             <T v="body">
               {confirm === 'out'
                 ? 'Your progress stays saved in your Google account. This phone will be cleared; sign in again any time to get it back.'
-                : 'This permanently deletes your saved progress from the cloud and signs you out. It cannot be undone.'}
+                : 'This permanently deletes your cloud progress and private leaderboard profile, then signs you out. Submitted leaderboard scores remain under a random pseudonym. This cannot be undone.'}
             </T>
             <Button label={confirm === 'out' ? 'Sign out' : 'Delete and sign out'} variant={confirm === 'out' ? 'primary' : 'destructive'} onPress={() => void (confirm === 'out' ? doOut() : doDelete())} />
             <Button label="Cancel" variant="ghost" onPress={() => setConfirm(null)} />

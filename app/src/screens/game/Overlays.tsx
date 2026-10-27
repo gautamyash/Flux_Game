@@ -8,8 +8,9 @@ import { Button, Overlay, Sheet, T, fmtTime } from '../../components/ui';
 import { useTheme } from '../../theme/ThemeProvider';
 import { AchievementDef, achievementById } from '../../lib/achievements';
 import { Badge } from '../../components/Badge';
-import { CHAPTERS } from '../../lib/levels';
+import { CAMPAIGN_WORLDS, CHAPTERS } from '../../lib/levels';
 import { ResultData, MAX_HINTS } from './useGame';
+import type { SubmissionResult } from '../../cloud/leaderboards';
 
 export function ResultRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
   const { t } = useTheme();
@@ -21,18 +22,27 @@ export function ResultRow({ label, value, good }: { label: string; value: string
   );
 }
 
-export function ResultView({ level, state, data, kind, onNext, onRetry, onHome }: {
-  level: Level; state: GameState; data: ResultData; kind: string; onNext: () => void; onRetry: () => void; onHome: () => void;
+export function ResultView({ level, state, data, kind, leaderboardSubmission, onRetryLeaderboard, onNext, onRetry, onHome }: {
+  level: Level; state: GameState; data: ResultData; kind: string;
+  leaderboardSubmission: SubmissionResult | 'pending' | null; onRetryLeaderboard: () => void;
+  onNext: () => void; onRetry: () => void; onHome: () => void;
 }) {
   const { t, board } = useTheme();
   const ch = data.outcome?.chapterCompleted ?? null;
+  const unlockedWorld = CAMPAIGN_WORLDS.find((world) => world.name === data.campaignWorldUnlocked);
+  const resultTitle = kind === 'campaign' && data.campaignComplete ? 'Campaign complete!'
+    : unlockedWorld ? 'World unlocked!'
+    : ch ? `Chapter ${ch} complete`
+    : data.outcome?.newBest ? 'New best!' : 'Solved';
   const share = () => {
     void Share.share({ message: `I solved ${level.id === 'daily' || kind === 'daily' ? 'today’s FLUX daily' : 'FLUX ' + level.id} in ${data.moves} moves ${'★'.repeat(data.stars)}` });
   };
   return (
     <Overlay anchor="center">
       <Sheet style={{ alignItems: 'center' }}>
-        <T v="h2">{ch ? `Chapter ${ch} complete` : data.outcome?.newBest ? 'New best!' : 'Solved'}</T>
+        <T v="h2" color={data.campaignComplete ? CAMPAIGN_WORLDS[49].palette.accent : unlockedWorld?.palette.accent}>{resultTitle}</T>
+        {unlockedWorld ? <T v="body" align="center" color={unlockedWorld.palette.accent}>{unlockedWorld.name} is now open. Its five levels are ready on the Campaign map.</T> : null}
+        {kind === 'campaign' && data.campaignComplete ? <T v="body" align="center" color={CAMPAIGN_WORLDS[49].palette.accent}>You completed all 250 levels and reached {CAMPAIGN_WORLDS[49].name}. Your campaign progress is saved.</T> : null}
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {[1, 2, 3].map((i) => <StarShape key={i} size={36} filled={i <= data.stars} color={t.bonus} empty={t.grid} />)}
         </View>
@@ -44,6 +54,23 @@ export function ResultView({ level, state, data, kind, onNext, onRetry, onHome }
           {data.bonus ? <ResultRow label="Bonus star" value="Collected" good /> : null}
           {data.streak ? <ResultRow label="Daily streak" value={`${data.streak} day${data.streak === 1 ? '' : 's'}`} good /> : null}
         </View>
+        {(kind === 'classic' || kind === 'master' || kind === 'campaign' || kind === 'daily') && leaderboardSubmission ? (
+          <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 8 }}>
+            <T v="small" align="center">
+              {leaderboardSubmission === 'pending' ? 'Submitting your score…'
+                : leaderboardSubmission === 'submitted' ? 'Score submitted to the leaderboard.'
+                : leaderboardSubmission === 'duplicate' ? 'This run was already submitted.'
+                : leaderboardSubmission === 'not-better' ? 'Run recorded. Your leaderboard best remains unchanged.'
+                : leaderboardSubmission === 'unauthenticated' ? 'Sign in with Google to submit leaderboard scores.'
+                : leaderboardSubmission === 'unavailable' ? 'Could not submit while offline. Your game progress is safe.'
+                : leaderboardSubmission === 'rejected' ? 'Firebase rejected this score submission. Check the deployed rules.'
+                : 'Could not submit this score.'}
+            </T>
+            {leaderboardSubmission === 'unavailable' || leaderboardSubmission === 'error' ? (
+              <Button label="Retry score submission" variant="secondary" height={44} onPress={onRetryLeaderboard} />
+            ) : null}
+          </View>
+        ) : null}
         {data.badges.length ? (
           <View style={{ alignSelf: 'stretch', gap: 8, padding: 12, borderRadius: 16, backgroundColor: t.accentSoft }}>
             <T v="cap" color={t.accent}>{data.badges.length > 1 ? 'NEW BADGES' : 'NEW BADGE'}</T>
@@ -68,7 +95,7 @@ export function ResultView({ level, state, data, kind, onNext, onRetry, onHome }
           </View>
         ) : null}
         <View style={{ alignSelf: 'stretch', gap: 8 }}>
-          <Button label={kind === 'classic' ? 'Next level' : kind === 'chaos' || kind === 'master' ? 'Next puzzle' : 'Done'} onPress={onNext} />
+          <Button label={kind === 'campaign' ? (data.campaignComplete || level.index === 250 ? 'Return to campaign map' : unlockedWorld ? 'Continue campaign' : 'Next campaign level') : kind === 'classic' ? 'Next level' : kind === 'chaos' || kind === 'master' ? 'Next puzzle' : 'Done'} onPress={onNext} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Button label="Retry" variant="secondary" height={48} flex={1} onPress={onRetry} />
             <Button label="Share" variant="secondary" height={48} flex={1} icon="share" onPress={share} />
@@ -130,12 +157,21 @@ export function ConfirmRestart({ onYes, onNo }: { onYes: () => void; onNo: () =>
   );
 }
 
-export function HintLimit({ onClose }: { onClose: () => void }) {
+function hintCountdown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+export function HintLimit({ refillMs, onClose }: { refillMs: number | null; onClose: () => void }) {
   return (
     <Overlay anchor="center" onDismiss={onClose}>
       <Sheet>
         <T v="h3">No hints left</T>
-        <T v="body">You can use {MAX_HINTS} hints per level. Try undoing a few steps and looking again.</T>
+        <T v="body">Your {MAX_HINTS} hints refill together 24 hours after you first use one.</T>
+        <T v="title">Next refill in {hintCountdown(refillMs ?? 24 * 60 * 60 * 1000)}</T>
         <Button label="Got it" onPress={onClose} />
       </Sheet>
     </Overlay>

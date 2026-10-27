@@ -3,7 +3,7 @@ jest.mock('expo-notifications', () => ({}));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  SCHEMA, dateKey, flushStore, getState, loadStore, migrate, recordClassicSolve, recordDailySolve, resetAll, setProfile, trustedNow, touchActive,
+  HINTS_MAX, HINTS_REFILL_MS, SCHEMA, beginEnergyRun, dateKey, energyCountdownMs, ENERGY_MAX, ENERGY_REFILL_MS, flushStore, getState, hintsCountdownMs, isValidDateKey, loadStore, migrate, recordClassicSolve, recordDailySolve, refreshEnergy, refreshHints, resetAll, saveAccountProgressSnapshot, selectGoogleAccount, setGoogleAccount, setGuest, setProfile, signOutLocal, spendHint, trustedNow, touchActive,
 } from '../src/store/store';
 import { evaluateAchievements } from '../src/lib/achievements';
 import { getLevel } from '../src/lib/levels';
@@ -16,6 +16,7 @@ const info = { moves: 5, time: 20, hints: 0, bonus: false, stars: 3 };
 beforeEach(async () => {
   await AsyncStorage.clear();
   resetAll();
+  await flushStore();
 });
 
 describe('migrate', () => {
@@ -79,9 +80,136 @@ describe('load / save', () => {
     expect(getState().loaded).toBe(true);
     expect(await AsyncStorage.getItem('flux.v1.corrupt')).toBe('{not json');
   });
+
+  test('account snapshots require a matching signed-in owner and incompatible snapshots do not switch the current account', async () => {
+    await loadStore();
+    setGuest();
+    await expect(saveAccountProgressSnapshot('google-a')).rejects.toThrow('could not be safely associated');
+    setGoogleAccount({ uid: 'google-a', email: '', name: 'A', photo: null });
+    const before = getState();
+    await AsyncStorage.setItem('flux.v1.account.google-b', JSON.stringify({ version: 99, uid: 'google-b', progress: {} }));
+    expect(await AsyncStorage.getItem('flux.v1.account.google-b')).not.toBeNull();
+    await expect(selectGoogleAccount({ uid: 'google-b', email: '', name: 'B', photo: null })).rejects.toThrow('incompatible');
+    expect(getState().account?.uid).toBe('google-a');
+    expect(getState().levels).toEqual(before.levels);
+  });
+});
+
+describe('energy', () => {
+  const start = 1_800_000_000_000;
+
+  test('new players begin with five energy', () => {
+    expect(migrate({}).energy).toBe(5);
+  });
+
+  test('charges one energy once per initialized run ID', () => {
+    expect(beginEnergyRun('run-a', start)).toBe(true);
+    expect(beginEnergyRun('run-a', start + 1000)).toBe(true);
+    expect(getState().energy).toBe(4);
+  });
+
+  test('energy never goes below zero and empty players cannot start', () => {
+    for (let i = 0; i < ENERGY_MAX; i++) expect(beginEnergyRun(`run-${i}`, start)).toBe(true);
+    expect(getState().energy).toBe(0);
+    expect(beginEnergyRun('run-empty', start)).toBe(false);
+    expect(getState().energy).toBe(0);
+  });
+
+  test('a remounted run and resumed run ID are not charged twice', () => {
+    beginEnergyRun('saved-run', start);
+    expect(beginEnergyRun('saved-run', start + 60_000)).toBe(true);
+    expect(getState().energy).toBe(4);
+  });
+
+  test('energy and its refill timestamp persist across reload', async () => {
+    await loadStore();
+    beginEnergyRun('persisted-run', start);
+    await flushStore();
+    await loadStore();
+    expect(getState().energy).toBe(4);
+    expect(getState().energyRefillStartedAt).toBe(start);
+  });
+
+  test('countdown uses elapsed time and refills fully after three hours', () => {
+    beginEnergyRun('timed-run', start);
+    expect(energyCountdownMs(start + 60_000)).toBe(ENERGY_REFILL_MS - 60_000);
+    expect(refreshEnergy(start + ENERGY_REFILL_MS)).toBe(ENERGY_MAX);
+    expect(getState().energyRefillStartedAt).toBeNull();
+  });
+
+  test('full energy has no countdown and migration clamps excess energy', () => {
+    expect(energyCountdownMs(start)).toBeNull();
+    expect(migrate({ energy: 99 }).energy).toBe(ENERGY_MAX);
+  });
+
+  test('guest and Google transitions preserve the local energy balance', () => {
+    beginEnergyRun('transition-run', start);
+    setGuest();
+    setGoogleAccount({ uid: 'u1', email: '', name: 'Player', photo: null });
+    signOutLocal();
+    expect(getState().energy).toBe(4);
+    expect(getState().energyRefillStartedAt).toBe(start);
+  });
+});
+
+describe('daily hint allowance', () => {
+  test('starts full, spends across levels, and refills the full set 24 hours after first use', () => {
+    const start = trustedNow();
+    expect(getState().hintsRemaining).toBe(HINTS_MAX);
+    expect(spendHint(start)).toBe(true);
+    expect(spendHint(start + 60_000)).toBe(true);
+    expect(spendHint(start + 120_000)).toBe(true);
+    expect(getState().hintsRemaining).toBe(0);
+    expect(getState().hintsRefillStartedAt).toBe(start);
+    expect(spendHint(start + 123_000)).toBe(false);
+    expect(hintsCountdownMs(start + HINTS_REFILL_MS - 1)).toBe(1);
+    expect(refreshHints(start + HINTS_REFILL_MS)).toBe(HINTS_MAX);
+    expect(getState().hintsRefillStartedAt).toBeNull();
+    expect(spendHint(start + HINTS_REFILL_MS)).toBe(true);
+    expect(getState().hintsRefillStartedAt).toBe(start + HINTS_REFILL_MS);
+  });
+
+  test('refills unused allowance too when its 24-hour window expires', () => {
+    const start = trustedNow();
+    expect(spendHint(start)).toBe(true);
+    expect(getState().hintsRemaining).toBe(HINTS_MAX - 1);
+    expect(refreshHints(start + HINTS_REFILL_MS)).toBe(HINTS_MAX);
+  });
+
+  test('preserves balance and refill time across reload and account sign-out', async () => {
+    await loadStore();
+    const start = trustedNow();
+    expect(spendHint(start)).toBe(true);
+    await flushStore();
+    await loadStore();
+    expect(getState().hintsRemaining).toBe(HINTS_MAX - 1);
+    expect(getState().hintsRefillStartedAt).toBe(start);
+    signOutLocal();
+    expect(getState().hintsRemaining).toBe(HINTS_MAX - 1);
+    expect(getState().hintsRefillStartedAt).toBe(start);
+  });
+
+  test('migration sanitizes malformed allowance values', () => {
+    expect(migrate({ hintsRemaining: 99 }).hintsRemaining).toBe(HINTS_MAX);
+    expect(migrate({ hintsRemaining: -2 }).hintsRemaining).toBe(0);
+    expect(migrate({ hintsRemaining: 0, hintsRefillStartedAt: 1234 }).hintsRefillStartedAt).toBe(1234);
+  });
 });
 
 describe('clock tampering', () => {
+  test('daily board IDs accept only real UTC calendar dates, including Gregorian leap years', () => {
+    expect(isValidDateKey('2024-02-29')).toBe(true);
+    expect(isValidDateKey('2000-02-29')).toBe(true);
+    expect(isValidDateKey('1900-02-29')).toBe(false);
+    expect(isValidDateKey('2026-02-29')).toBe(false);
+    expect(isValidDateKey('2026-13-01')).toBe(false);
+  });
+
+  test('Daily date keys use the UTC calendar day', () => {
+    expect(dateKey(new Date('2026-10-22T00:30:00+05:30'))).toBe('2026-10-21');
+    expect(dateKey(new Date('2026-10-22T23:30:00Z'))).toBe('2026-10-22');
+  });
+
   test('moving the phone clock back does not give an older Daily date', () => {
     const real = Date.now;
     const day = 864e5;

@@ -79,7 +79,7 @@ export function LevelsScreen({ chapter }: { chapter: number }) {
           return (
             <View key={d.id} style={{ alignItems: 'center', transform: [{ translateX: offset }] }}>
               <Pressable disabled={!unlocked} accessibilityRole="button" accessibilityLabel={`Level ${d.id}${rec ? `, ${rec.stars} stars` : unlocked ? '' : ', locked'}`}
-                onPress={() => nav.push({ name: 'game', source: { kind: 'classic', levelId: d.id } })}
+                onPress={() => nav.startGame({ kind: 'classic', levelId: d.id })}
                 style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: rec ? t.accent : unlocked ? t.raised : t.plate, borderWidth: 2, borderColor: unlocked ? t.accent : t.grid }}>
                 {unlocked ? <T v="h3" color={rec ? t.onAccent : t.text}>{i + 1}</T> : <Icon name="lock" size={22} color={t.disabled} />}
               </Pressable>

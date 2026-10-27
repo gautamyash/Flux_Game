@@ -1,7 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { FadeIn, SlideInRight } from 'react-native-reanimated';
-import { useSettings } from '../store/store';
+import { dateKey, useSettings } from '../store/store';
 
 export type GameSource =
   | { kind: 'classic'; levelId: string }
@@ -9,6 +9,7 @@ export type GameSource =
   | { kind: 'rush' }
   | { kind: 'chaos' }
   | { kind: 'master'; levelId?: string }
+  | { kind: 'campaign'; levelId: string }
   | { kind: 'endless' }
   | { kind: 'practice' };
 
@@ -20,8 +21,10 @@ export type Route =
   | { name: 'chapters' }
   | { name: 'levels'; chapter: number }
   | { name: 'intro'; chapter: number }
-  | { name: 'game'; source: GameSource }
+  | { name: 'game'; source: GameSource; runId: string; dailyDay?: string }
   | { name: 'daily' }
+  | { name: 'leaderboard'; kind: 'global' | 'daily' }
+  | { name: 'campaign' }
   | { name: 'modes' }
   | { name: 'howto' }
   | { name: 'cells' }
@@ -37,6 +40,8 @@ interface NavApi {
   pop: () => void;
   replace: (r: Route) => void;
   reset: (r: Route) => void;
+  startGame: (source: GameSource, runId?: string, dailyDay?: string) => void;
+  replaceGame: (source: GameSource) => void;
   canGoBack: boolean;
 }
 
@@ -48,10 +53,15 @@ export function useNav(): NavApi {
   return v;
 }
 
+export function newRunId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function NavProvider({ initial, render }: { initial: Route; render: (r: Route) => React.ReactNode }) {
   const [stack, setStack] = useState<{ r: Route; k: number }[]>([{ r: initial, k: 0 }]);
   const [counter, setCounter] = useState(1);
   const [dir, setDir] = useState<'push' | 'fade'>('fade');
+  const lastGameStart = useRef(0);
   const settings = useSettings();
 
   const push = useCallback((r: Route) => {
@@ -73,6 +83,18 @@ export function NavProvider({ initial, render }: { initial: Route; render: (r: R
     setStack([{ r, k: counter }]);
     setCounter((c) => c + 1);
   }, [counter]);
+  const startGame = useCallback((source: GameSource, runId = newRunId(), dailyDay?: string) => {
+    const now = Date.now();
+    if (now - lastGameStart.current < 500) return;
+    lastGameStart.current = now;
+    push({ name: 'game', source, runId, ...(source.kind === 'daily' ? { dailyDay: dailyDay ?? dateKey() } : {}) });
+  }, [push]);
+  const replaceGame = useCallback((source: GameSource) => {
+    const now = Date.now();
+    if (now - lastGameStart.current < 500) return;
+    lastGameStart.current = now;
+    replace({ name: 'game', source, runId: newRunId(), ...(source.kind === 'daily' ? { dailyDay: dateKey() } : {}) });
+  }, [replace]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -86,7 +108,7 @@ export function NavProvider({ initial, render }: { initial: Route; render: (r: R
   }, [stack.length, pop]);
 
   const top = stack[stack.length - 1];
-  const api = useMemo<NavApi>(() => ({ route: top.r, push, pop, replace, reset, canGoBack: stack.length > 1 }), [top, push, pop, replace, reset, stack.length]);
+  const api = useMemo<NavApi>(() => ({ route: top.r, push, pop, replace, reset, startGame, replaceGame, canGoBack: stack.length > 1 }), [top, push, pop, replace, reset, startGame, replaceGame, stack.length]);
   const entering = settings.reduceMotion ? undefined : dir === 'push' ? SlideInRight.duration(240) : FadeIn.duration(180);
 
   return (

@@ -10,6 +10,9 @@ app/.expo/
 app/dist/
 app/web-build/
 
+# Local Firebase Android configuration (not used by the JS SDK setup)
+app/google-services.json
+
 # Environment secrets
 .env
 .env.*

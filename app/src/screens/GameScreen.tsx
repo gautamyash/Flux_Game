@@ -3,13 +3,13 @@ import { AccessibilityInfo, LayoutChangeEvent, Pressable, View } from 'react-nat
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Board, fitBoard } from '../components/Board';
 import { Icon } from '../components/Icon';
-import { Screen, T, TopBar, IconButton, fmtTime } from '../components/ui';
+import { Button, Screen, T, TopBar, IconButton, fmtTime } from '../components/ui';
 import { GameSource, useNav } from '../nav/Nav';
 import { useTheme } from '../theme/ThemeProvider';
-import { useSettings, useStore } from '../store/store';
-import { CHAPTERS } from '../lib/levels';
+import { ENERGY_MAX, ENERGY_REFILL_MS, refreshEnergy, trustedNow, useSettings, useStore } from '../store/store';
+import { CAMPAIGN_WORLDS, CHAPTERS } from '../lib/levels';
 import { describeCell } from '../lib/a11y';
-import { MAX_HINTS, RUSH_SECONDS, useGame } from './game/useGame';
+import { RUSH_SECONDS, useGame } from './game/useGame';
 import { AchToast, ConfirmRestart, FailedView, HintLimit, MechIntro, PauseSheet, ResultView, RunOver } from './game/Overlays';
 
 /** ticks on its own so the whole screen does not re-render every second */
@@ -47,10 +47,10 @@ function Pill({ icon, text, color }: { icon?: 'clock' | 'star'; text: string; co
   );
 }
 
-function ActionButton({ icon, label, onPress, badge, disabled }: { icon: 'undo' | 'bulb' | 'restart'; label: string; onPress: () => void; badge?: string; disabled?: boolean }) {
+function ActionButton({ icon, label, onPress, badge, disabled, accessibilityLabel }: { icon: 'undo' | 'bulb' | 'restart'; label: string; onPress: () => void; badge?: string; disabled?: boolean; accessibilityLabel?: string }) {
   const { t } = useTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
+    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} disabled={disabled} onPress={onPress}
       style={{ flex: 1, height: 56, borderRadius: 18, backgroundColor: t.raised, borderWidth: 1, borderColor: t.grid, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: disabled ? 0.45 : 1 }}>
       <Icon name={icon} size={22} color={t.text} />
       <T v="small" color={t.text}>{label}</T>
@@ -59,11 +59,12 @@ function ActionButton({ icon, label, onPress, badge, disabled }: { icon: 'undo' 
   );
 }
 
-function titleFor(source: GameSource, levelId: string, chapter: number, index: number) {
+function titleFor(source: GameSource, levelId: string, chapter: number, index: number, dailyDay?: string) {
   switch (source.kind) {
     case 'classic': return { title: `Level ${levelId}`, sub: CHAPTERS[chapter - 1]?.name ?? '' };
     case 'master': return { title: 'Master', sub: `Puzzle ${index}` };
-    case 'daily': return { title: 'Daily Puzzle', sub: new Date().toDateString() };
+    case 'campaign': return { title: `Campaign ${index}`, sub: CAMPAIGN_WORLDS.find((world) => index >= world.firstLevel && index <= world.lastLevel)?.name ?? 'FLUX Campaign' };
+    case 'daily': return { title: 'Daily Puzzle', sub: `UTC ${dailyDay ?? ''}` };
     case 'rush': return { title: 'Rush', sub: 'Solve as many as you can' };
     case 'endless': return { title: 'Endless', sub: 'One mistake ends the run' };
     case 'chaos': return { title: 'Chaos', sub: 'Random mix' };
@@ -71,11 +72,35 @@ function titleFor(source: GameSource, levelId: string, chapter: number, index: n
   }
 }
 
-export function GameScreen({ source }: { source: GameSource }) {
+function EnergyDepleted({ onHome }: { onHome: () => void }) {
+  const { t } = useTheme();
+  const refillAt = useStore((s) => s.energyRefillStartedAt);
+  const [now, setNow] = useState(trustedNow());
+  useEffect(() => {
+    const id = setInterval(() => { refreshEnergy(); setNow(trustedNow()); }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const ms = refillAt === null ? ENERGY_REFILL_MS : Math.max(0, ENERGY_REFILL_MS - (now - refillAt));
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+  const countdown = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return (
+    <Screen>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+        <Icon name="bolt" size={56} color={t.accent} />
+        <T v="h1" align="center">Out of energy</T>
+        <T v="body" align="center">You’ve used all {ENERGY_MAX} energy. It refills automatically every 3 hours.</T>
+        <T v="title" color={t.accent}>Next full refill in {countdown}</T>
+        <Button label="Return to Home" onPress={onHome} />
+      </View>
+    </Screen>
+  );
+}
+
+export function GameScreen({ source, runId, dailyDay }: { source: GameSource; runId: string; dailyDay?: string }) {
   const nav = useNav();
   const { t, board } = useTheme();
   const settings = useSettings();
-  const g = useGame(source);
+  const g = useGame(source, runId, dailyDay);
   const [area, setArea] = useState({ w: 0, h: 0 });
   const { level, st } = g;
   const best = useStore((s) => s.stats);
@@ -101,12 +126,12 @@ export function GameScreen({ source }: { source: GameSource }) {
   );
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: g.shake.value * 6 }] }));
   const onLayout = (e: LayoutChangeEvent) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const { title, sub } = titleFor(source, level.id, level.chapter, level.index);
+  const { title, sub } = titleFor(source, level.id, level.chapter, level.index, g.runDay);
   const practice = source.kind === 'practice';
   const left = settings.leftHanded;
   const actions = [
     <ActionButton key="u" icon="undo" label="Undo" onPress={g.undo} disabled={g.session.history.length <= 1 || st.status !== 'playing'} />,
-    <ActionButton key="h" icon="bulb" label="Hint" onPress={g.hint} badge={String(MAX_HINTS - g.hintsUsed)} disabled={st.status !== 'playing'} />,
+    <ActionButton key="h" icon="bulb" label="Hint" accessibilityLabel={`Hint, ${g.hintsRemaining} remaining`} onPress={g.hint} badge={String(g.hintsRemaining)} disabled={st.status !== 'playing'} />,
     <ActionButton key="r" icon="restart" label="Restart" onPress={() => g.setConfirmRestart(true)} />,
   ];
   const left_ = level.required.filter((i) => !st.used[i]).length;
@@ -118,7 +143,9 @@ export function GameScreen({ source }: { source: GameSource }) {
     : st.nextNode >= level.nodeCount ? 'Fill every other cell first. The last number opens last.'
     : 'Keep going: visit the numbers in order and fill every open cell.';
   const quit = () => nav.pop();
-  const again = () => { nav.replace({ name: 'game', source: { ...source } as GameSource }); };
+  const again = () => { nav.replaceGame({ ...source } as GameSource); };
+
+  if (g.energyDenied) return <EnergyDepleted onHome={() => nav.reset({ name: 'home' })} />;
 
   return (
     <Screen>
@@ -158,7 +185,7 @@ export function GameScreen({ source }: { source: GameSource }) {
       <View style={{ flexDirection: left ? 'row-reverse' : 'row', gap: 10, paddingTop: 6 }}>{actions}</View>
 
       {g.intro ? <MechIntro info={g.intro} onClose={g.closeIntro} /> : null}
-      {g.hintLimit ? <HintLimit onClose={() => g.setHintLimit(false)} /> : null}
+      {g.hintLimit ? <HintLimit refillMs={g.hintRefillMs} onClose={() => g.setHintLimit(false)} /> : null}
       {g.confirmRestart ? <ConfirmRestart onYes={g.doRestart} onNo={() => g.setConfirmRestart(false)} /> : null}
       {g.paused ? (
         <PauseSheet onResume={() => g.setPaused(false)} onRestart={() => { g.setPaused(false); g.setConfirmRestart(true); }}
@@ -169,7 +196,7 @@ export function GameScreen({ source }: { source: GameSource }) {
         <FailedView level={level} state={st} canUndo={g.session.history.length > 1} onUndo={g.undo} onRetry={g.doRestart} />
       ) : null}
       {g.result ? (
-        <ResultView level={level} state={st} data={g.result} kind={source.kind} onNext={g.goNext} onRetry={() => { g.doRestart(); }} onHome={() => nav.reset({ name: 'home' })} />
+        <ResultView level={level} state={st} data={g.result} kind={source.kind} leaderboardSubmission={g.leaderboardSubmission} onRetryLeaderboard={g.retryLeaderboardSubmission} onNext={g.goNext} onRetry={again} onHome={() => nav.reset({ name: 'home' })} />
       ) : null}
       {g.runOver && (source.kind === 'rush' || source.kind === 'endless') ? (
         <RunOver kind={source.kind} score={g.runOver.score} best={Math.max(g.runOver.best, source.kind === 'rush' ? best.rushBest : best.endlessBest)}

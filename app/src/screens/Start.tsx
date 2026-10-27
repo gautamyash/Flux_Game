@@ -54,7 +54,7 @@ export function OnboardingScreen() {
         </View>
       </View>
       <View style={{ gap: 8 }}>
-        <Button label="Try a practice puzzle" onPress={() => { save(); nav.replace({ name: 'game', source: { kind: 'practice' } }); }} />
+        <Button label="Try a practice puzzle" onPress={() => { save(); nav.replaceGame({ kind: 'practice' }); }} />
         <Button label="Skip" variant="ghost" onPress={() => { save(); setOnboarded(); nav.reset({ name: 'home' }); }} />
       </View>
     </Screen>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { Level } from '../engine';
-import { LEVEL_DEFS, Mech, mechanicsOf } from '../lib/levels';
+import { ALL_LEVEL_DEFS, LEVEL_DEFS, Mech, mechanicsOf } from '../lib/levels';
 import { SkinId } from '../theme/tokens';
 import type { GameSource } from '../nav/Nav';
 
@@ -41,6 +41,7 @@ export interface Profile {
 
 /** an unfinished puzzle, saved so the player can pick up exactly where they stopped */
 export interface ResumeSnap {
+  runId: string;
   source: GameSource;
   levelId: string;
   /** daily puzzles only resume on the same day */
@@ -111,7 +112,20 @@ export interface AppState {
   epoch: number;
   /** account whose cloud copy this phone's progress was last merged with */
   syncedUid: string | null;
+  /** Local consumable energy. Cloud sync deliberately excludes it until concurrent spends can be made safe. */
+  energy: number;
+  energyRefillStartedAt: number | null;
+  /** Local hint allowance; refills as a full set 24 hours after the first hint is spent. */
+  hintsRemaining: number;
+  hintsRefillStartedAt: number | null;
+  activeRunId: string | null;
 }
+
+export const ENERGY_MAX = 5;
+export const ENERGY_COST_PER_RUN = 1;
+export const ENERGY_REFILL_MS = 3 * 60 * 60 * 1000;
+export const HINTS_MAX = 3;
+export const HINTS_REFILL_MS = 24 * 60 * 60 * 1000;
 
 export const defaultSettings: Settings = {
   sound: true,
@@ -171,9 +185,14 @@ const initial = (): AppState => ({
   schema: SCHEMA,
   epoch: 0,
   syncedUid: null,
+  energy: ENERGY_MAX,
+  energyRefillStartedAt: null,
+  hintsRemaining: HINTS_MAX,
+  hintsRefillStartedAt: null,
+  activeRunId: null,
 });
 
-export const SCHEMA = 3;
+export const SCHEMA = 5;
 const KEY = 'flux.v1';
 const BACKUP_KEY = 'flux.v1.corrupt';
 let state: AppState = initial();
@@ -187,22 +206,23 @@ function emit() {
 function write() {
   const { loaded, ...rest } = state;
   void loaded;
-  return AsyncStorage.setItem(KEY, JSON.stringify(rest)).catch(() => {});
+  return Promise.resolve(AsyncStorage.setItem(KEY, JSON.stringify(rest)));
 }
 
 function persist() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    void write();
+    void write().catch(() => {});
   }, 250);
 }
 
 /** write any pending change right now (call when the app goes to the background) */
 export async function flushStore() {
-  if (!saveTimer) return;
-  clearTimeout(saveTimer);
-  saveTimer = null;
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
   await write();
 }
 
@@ -263,7 +283,7 @@ export function migrate(raw: unknown): AppState {
       else if (typeof ps[k] === typeof d) (stats as unknown as Record<string, unknown>)[k] = ps[k];
     }
   }
-  const knownIds = new Set(LEVEL_DEFS.map((d) => d.id));
+  const knownIds = new Set(ALL_LEVEL_DEFS.map((d) => d.id));
   const levels: Record<string, LevelRecord> = {};
   if (isObj(p.levels)) {
     for (const [id, r] of Object.entries(p.levels)) {
@@ -277,7 +297,7 @@ export function migrate(raw: unknown): AppState {
   const daily: Record<string, DailyRecord> = {};
   if (isObj(p.daily)) {
     for (const [k, r] of Object.entries(p.daily)) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !isObj(r)) continue;
+      if (!isValidDateKey(k) || !isObj(r)) continue;
       daily[k] = { stars: Math.min(3, Math.max(1, Math.round(num(r.stars, 1)))), moves: num(r.moves, 0), time: num(r.time, 0), bonus: bool(r.bonus, false) };
     }
   }
@@ -297,6 +317,7 @@ export function migrate(raw: unknown): AppState {
   const rs = p.resume as unknown;
   if (isObj(rs) && isObj(rs.source) && typeof rs.levelId === 'string' && Array.isArray(rs.entered) && rs.entered.every((n) => Number.isInteger(n) && n >= 0)) {
     resume = {
+      runId: typeof rs.runId === 'string' ? rs.runId : '',
       source: rs.source as unknown as GameSource, levelId: rs.levelId, day: typeof rs.day === 'string' ? rs.day : '',
       entered: rs.entered as number[], seconds: Math.max(0, num(rs.seconds, 0)), hints: Math.max(0, num(rs.hints, 0)), savedAt: num(rs.savedAt, 0),
     };
@@ -323,6 +344,15 @@ export function migrate(raw: unknown): AppState {
     schema: SCHEMA,
     epoch: Math.max(0, num(p.epoch, 0)),
     syncedUid: typeof p.syncedUid === 'string' ? p.syncedUid : null,
+    energy: Math.min(ENERGY_MAX, Math.max(0, Math.round(num(p.energy, ENERGY_MAX)))),
+    energyRefillStartedAt: Math.min(ENERGY_MAX, Math.max(0, Math.round(num(p.energy, ENERGY_MAX)))) >= ENERGY_MAX
+      ? null
+      : num(p.energyRefillStartedAt, now) || now,
+    hintsRemaining: Math.min(HINTS_MAX, Math.max(0, Math.round(num(p.hintsRemaining, HINTS_MAX)))),
+    hintsRefillStartedAt: Math.min(HINTS_MAX, Math.max(0, Math.round(num(p.hintsRemaining, HINTS_MAX)))) >= HINTS_MAX
+      ? null
+      : Math.max(0, num(p.hintsRefillStartedAt, now)) || now,
+    activeRunId: typeof p.activeRunId === 'string' ? p.activeRunId : null,
   };
 }
 
@@ -344,7 +374,106 @@ export async function loadStore() {
   } else {
     state = { ...state, loaded: true };
   }
+  refreshHints();
   emit();
+}
+
+interface AccountProgressSnapshot {
+  version: 1;
+  uid: string;
+  progress: Pick<AppState, 'onboarded' | 'levels' | 'daily' | 'stats' | 'achievements' | 'seen' | 'lastLevelId' | 'profile' | 'epoch' | 'syncedUid'>;
+}
+
+const accountStorageKey = (uid: string) => `flux.v1.account.${encodeURIComponent(uid)}`;
+
+/** Preserve account-owned local changes separately before switching Firebase identities. */
+export async function saveAccountProgressSnapshot(uid: string): Promise<void> {
+  if (state.mode !== 'google' || state.account?.uid !== uid) {
+    throw new Error('The current progress could not be safely associated with a Google account. Sign in to its original account before switching.');
+  }
+  const snapshot: AccountProgressSnapshot = {
+    version: 1,
+    uid,
+    progress: {
+      onboarded: state.onboarded,
+      levels: state.levels,
+      daily: state.daily,
+      stats: state.stats,
+      achievements: state.achievements,
+      seen: state.seen,
+      lastLevelId: state.lastLevelId,
+      profile: state.profile,
+      epoch: state.epoch,
+      syncedUid: state.syncedUid,
+    },
+  };
+  await AsyncStorage.setItem(accountStorageKey(uid), JSON.stringify(snapshot));
+}
+
+/** Select another Google account without carrying the previous account's progress into it. */
+export async function selectGoogleAccount(account: Account): Promise<void> {
+  if (state.mode === 'google' && state.account?.uid === account.uid) {
+    setGoogleAccount(account);
+    return;
+  }
+
+  let progress: Partial<AccountProgressSnapshot['progress']> | null = null;
+  const raw = await AsyncStorage.getItem(accountStorageKey(account.uid));
+  if (raw !== null) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(raw); }
+    catch { throw new Error('Saved progress for this Google account could not be read safely. The previous account data is preserved on this device.'); }
+    if (!isObj(parsed) || parsed.version !== 1 || parsed.uid !== account.uid || !isObj(parsed.progress)
+      || typeof parsed.progress.onboarded !== 'boolean' || !isObj(parsed.progress.levels) || !isObj(parsed.progress.daily)
+      || !isObj(parsed.progress.stats) || !isObj(parsed.progress.achievements) || !isObj(parsed.progress.seen)
+      || !(parsed.progress.lastLevelId === null || typeof parsed.progress.lastLevelId === 'string')
+      || !isObj(parsed.progress.profile) || typeof parsed.progress.epoch !== 'number'
+      || !(parsed.progress.syncedUid === null || parsed.progress.syncedUid === account.uid)) {
+      throw new Error('Saved progress for this Google account is incompatible. The previous account data is preserved on this device.');
+    }
+    // Reuse the existing migration/sanitization path before applying stored account data.
+    const safe = migrate({ ...parsed.progress, mode: 'google', account });
+    progress = {
+      onboarded: safe.onboarded,
+      levels: safe.levels,
+      daily: safe.daily,
+      stats: safe.stats,
+      achievements: safe.achievements,
+      seen: safe.seen,
+      lastLevelId: safe.lastLevelId,
+      profile: safe.profile,
+      epoch: safe.epoch,
+      syncedUid: safe.syncedUid,
+    };
+  }
+
+  const next: AppState = {
+    ...state,
+    mode: 'google',
+    account,
+    onboarded: progress?.onboarded ?? state.onboarded,
+    levels: progress?.levels ?? {},
+    daily: progress?.daily ?? {},
+    stats: progress?.stats ?? initialStats(),
+    achievements: progress?.achievements ?? {},
+    seen: progress?.seen ?? {},
+    lastLevelId: progress?.lastLevelId ?? null,
+    profile: progress?.profile ?? newProfile(),
+    epoch: progress?.epoch ?? 0,
+    syncedUid: progress?.syncedUid === account.uid ? account.uid : null,
+  };
+  // Persist the identity and its matching progress before changing in-memory state.
+  // A storage failure therefore leaves the previous account selected and recoverable.
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  const { loaded, ...rest } = next;
+  void loaded;
+  await AsyncStorage.setItem(KEY, JSON.stringify(rest));
+  state = next;
+  emit();
+}
+
+export async function removeAccountProgressSnapshot(uid: string): Promise<void> {
+  await AsyncStorage.removeItem(accountStorageKey(uid));
 }
 
 /* ---------- login / cloud ---------- */
@@ -372,7 +501,7 @@ export function setSyncedUid(uid: string | null) {
 /** Sign out: the account's data stays in the cloud, the phone goes back to a clean state so the next person starts fresh. */
 export function signOutLocal() {
   const settings = state.settings;
-  state = { ...initial(), loaded: true, settings, mode: null, onboarded: true };
+  state = { ...initial(), loaded: true, settings, mode: null, onboarded: true, energy: state.energy, energyRefillStartedAt: state.energyRefillStartedAt, hintsRemaining: state.hintsRemaining, hintsRefillStartedAt: state.hintsRefillStartedAt, activeRunId: null };
   emit();
   persist();
   void flushStore();
@@ -405,6 +534,73 @@ export function saveResume(snap: ResumeSnap | null) {
   set({ resume: snap });
 }
 
+/** Resolve elapsed refill time using trustedNow, which never moves backwards within this install. */
+export function refreshEnergy(now = trustedNow()): number {
+  if (state.energy < ENERGY_MAX && state.energyRefillStartedAt !== null && now - state.energyRefillStartedAt >= ENERGY_REFILL_MS) {
+    set({ energy: ENERGY_MAX, energyRefillStartedAt: null });
+  }
+  return state.energy;
+}
+
+/** Refill the full local hint allowance 24 hours after its first spend. */
+export function refreshHints(now = trustedNow()): number {
+  if (state.hintsRemaining < HINTS_MAX && state.hintsRefillStartedAt !== null && now - state.hintsRefillStartedAt >= HINTS_REFILL_MS) {
+    set({ hintsRemaining: HINTS_MAX, hintsRefillStartedAt: null });
+  }
+  return state.hintsRemaining;
+}
+
+export function hintsCountdownMs(now = trustedNow()): number | null {
+  refreshHints(now);
+  return state.hintsRemaining >= HINTS_MAX || state.hintsRefillStartedAt === null
+    ? null
+    : Math.max(0, HINTS_REFILL_MS - (now - state.hintsRefillStartedAt));
+}
+
+/** Spend one hint charge. The 24-hour refill clock starts with the first charge spent. */
+export function spendHint(now = trustedNow()): boolean {
+  refreshHints(now);
+  if (state.hintsRemaining <= 0) return false;
+  set({
+    hintsRemaining: state.hintsRemaining - 1,
+    hintsRefillStartedAt: state.hintsRefillStartedAt ?? now,
+  });
+  return true;
+}
+
+export function energyCountdownMs(now = trustedNow()): number | null {
+  refreshEnergy(now);
+  return state.energy >= ENERGY_MAX || state.energyRefillStartedAt === null
+    ? null
+    : Math.max(0, ENERGY_REFILL_MS - (now - state.energyRefillStartedAt));
+}
+
+/**
+ * A new run is one successfully initialized game session represented by a unique navigation runId.
+ * Remounts/resumes carrying that ID are the same run; explicit Play Again and next-level actions use a new ID.
+ */
+export function beginEnergyRun(runId: string, now = trustedNow()): boolean {
+  refreshEnergy(now);
+  if (state.activeRunId === runId) return true;
+  if (state.energy < ENERGY_COST_PER_RUN) return false;
+  const energy = state.energy - ENERGY_COST_PER_RUN;
+  set({
+    energy,
+    energyRefillStartedAt: energy === ENERGY_MAX ? null : state.energyRefillStartedAt ?? now,
+    activeRunId: runId,
+  });
+  return true;
+}
+
+export function isRunActive(runId: string): boolean {
+  return state.activeRunId === runId;
+}
+
+/** Adopt a legacy saved puzzle created before run IDs existed, without charging it again. */
+export function adoptSavedRun(runId: string): void {
+  set({ activeRunId: runId });
+}
+
 export function touchActive() {
   set({ lastActive: Date.now() });
 }
@@ -423,14 +619,23 @@ export function trustedNow(): number {
 }
 
 export function dateKey(d: Date = new Date(trustedNow())): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${m}-${day}`;
+}
+
+export function isValidDateKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const monthDays = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= monthDays[month - 1];
 }
 
 function yesterdayKey(): string {
   const d = new Date(trustedNow());
-  d.setDate(d.getDate() - 1);
+  d.setUTCDate(d.getUTCDate() - 1);
   return dateKey(d);
 }
 

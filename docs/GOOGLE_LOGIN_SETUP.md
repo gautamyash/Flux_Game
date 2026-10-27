@@ -1,57 +1,57 @@
-# Google login + cloud save: one-time setup (about 20 minutes, free)
+# Firebase, Google sign-in and leaderboard setup
 
-The app already contains the login screen, Guest mode, cloud sync and account deletion. It needs a Firebase project to talk to. Until you fill `app/src/config.ts`, "Continue with Google" shows "not set up yet" and Guest mode works normally.
+FLUX already has Firebase client configuration, Google sign-in, private cloud progress, and pseudonymous Global and Daily leaderboards. Guest gameplay remains available offline. Any Google account can sign in; FLUX does not use an email allowlist.
 
-## 1. Create the Firebase project
-1. Go to https://console.firebase.google.com and click **Add project**. Name it "flux". Analytics: off.
-2. **Build > Authentication > Get started > Sign-in method > Google > Enable**. Choose a support email and Save.
-3. **Build > Firestore Database > Create database**. Choose a region close to your players, start in **production mode**.
-4. Firestore > **Rules** tab: paste the content of `firestore.rules` (repo root) and Publish. This makes each player able to read and write only their own save.
+## Current app configuration
 
-## 2. Register the web app config
-1. Project settings (gear) > **General > Your apps > Add app > Web (</>)**. Name "flux-web". Skip hosting.
-2. Copy the `firebaseConfig` values into `app/src/config.ts` > `FIREBASE_CONFIG`.
+- Firebase project: `fluxgame-ed74a`.
+- Android package: `com.gautamyash.flux` (from `app/app.json`).
+- Firebase Web client ID and client configuration are in `app/src/config.ts`; the app does not contain a Web client secret.
+- `app/google-services.json` is ignored by Git and is not consumed by the current Firebase JavaScript SDK configuration. Firebase Auth and Firestore initialize from `config.ts`; the Google Sign-In native plugin is configured in `app/app.json`. Keep the JSON local unless the native build architecture is changed to use the Google Services Gradle plugin.
+- EAS previously reported that no Android keystore is configured. Do not start a build until an EAS-managed preview keystore has been explicitly authorized and configured.
 
-## 3. The Google "web client ID"
-1. Firebase console > Authentication > Sign-in method > **Google** > expand **Web SDK configuration**. Copy **Web client ID**.
-2. Paste into `GOOGLE_WEB_CLIENT_ID` in `app/src/config.ts`.
+## Android Google sign-in setup
 
-## 4. Register your Android app (this is the step that most often goes wrong)
-Google only accepts sign-in from apps whose package name and signing certificate it knows.
-1. Firebase console > Project settings > General > **Add app > Android**. Package name: `com.vaibhav.flux`. You can skip downloading `google-services.json`.
-2. Get the SHA-1 of the key EAS signs your build with:
-   ```
-   cd app
-   npx eas-cli credentials
-   ```
-   Choose Android > the profile you build with (preview / production) > "Keystore: Manage everything needed to build your project" > view the keystore. Copy the **SHA-1** fingerprint.
-3. In Firebase: Project settings > your Android app > **Add fingerprint** > paste SHA-1. Do this for the `preview` keystore (test APKs) and the `production` keystore.
-4. When you publish to Play Store with **Play App Signing**, Google re-signs the app. Copy the **App signing key SHA-1** from Play Console > Setup > App signing and add it as a fingerprint too, or sign-in will fail for store installs.
+Google Sign-In must be tested with an APK signed by the key used for that APK. Debug, EAS preview, and Play App Signing certificates may have different SHA-1 fingerprints. The current package must be `com.gautamyash.flux`; do not use fingerprints from older `com.vaibhav.flux` builds.
 
-## 5. Build and test
-```
+After the preview keystore has been configured and an APK is built, retrieve the EAS credential fingerprint with:
+
+```powershell
 cd app
-npm install
-npm run build:apk
+npx eas-cli credentials -p android
 ```
-Install the APK on a phone with a Google account. Check:
-- [ ] Login screen appears on first launch (Continue with Google / Continue as Guest)
-- [ ] Guest: Home shows "GUEST · THIS PHONE ONLY", Settings > Account says progress is saved only on this phone
-- [ ] Google: play a level, wait ~5 s, Settings shows "Synced just now"
-- [ ] Uninstall, reinstall, sign in with the same account: levels, stars, badges and streak are back
-- [ ] Sign in on a second phone: same progress; play on one, reopen on the other: merged
-- [ ] Guest who already played taps "Sign in with Google" in Settings: guest progress is added to the account
-- [ ] Airplane mode: game keeps working; reconnect: "Synced" returns
-- [ ] Sign out: phone is cleared, login screen shows; sign in again: progress returns
-- [ ] Delete my cloud data: save removed from Firestore, signed out
 
-## How sync works (so nothing surprises you)
-- Saved in the cloud: levels, stars, daily results, badges, stats, streak, settings, player name/avatar.
-- Not saved in the cloud: the "resume" snapshot of an unfinished level (it stays on the phone).
-- Two copies are merged, never overwritten: best stars/moves/time per level, all badges, all daily results, highest counters, the newer streak.
-- "Reset progress" on a signed-in account is a deliberate wipe and wins over older copies on other phones.
-- Settings stay per phone; a brand-new phone adopts the account's settings.
-- Needs internet only to sync. All gameplay is offline.
+Select Android, the `preview` profile, then **Keystore: Manage everything needed to build your project** and view its SHA-1 fingerprint. Do not download the keystore to the repo or commit signing credentials. Add the preview SHA-1 in Firebase Console > Project settings > General > Your apps > Android app `com.gautamyash.flux` > Add fingerprint. If testing a locally signed debug APK, also register that debug key's SHA-1. When distributing through Google Play, add the Play Console **App signing key certificate** SHA-1 for Play-installed builds.
 
-## Cost
-Firestore free tier (1 GiB, 50k reads and 20k writes per day) is far above what this app needs: one small document per player, written a few times per play session.
+Google is enabled as a Firebase Authentication provider. No email allowlist is required. Successful Google Sign-In creates a Firebase Auth session; this has not yet been verified on a physical Android device. Do not describe it as device-tested until that check succeeds.
+
+## Firestore rules and indexes
+
+The reviewed local rules are in `firestore.rules`; the Daily leaderboard composite index is in `firestore.indexes.json`. The repository cannot confirm whether the rules pasted in the Firebase Console have been published. Review and publish them in Firebase Console > Firestore Database > Rules when authorized. The app has no server-side score validation; scores submitted by clients are pseudonymous but not cheat-proof.
+
+The root `firebase.json` maps those local files for later CLI deployment. After logging into Firebase CLI and reviewing the diff, deploy rules and index definitions with:
+
+```powershell
+firebase deploy --only firestore:rules,firestore:indexes --project fluxgame-ed74a
+```
+
+Do not run this command until production deployment is explicitly approved. The Daily query orders by stars descending, moves ascending, then time ascending and requires the composite index. The Global query uses a single-field score index, which Firestore maintains automatically.
+
+## Leaderboard behavior
+
+- Only Firebase sessions authenticated with the `google.com` provider can read or submit leaderboard data. Guest play and local progress remain offline.
+- Global scores reuse the current all-level total stars and solved-level count. Daily scores reuse the completed puzzle's existing stars, moves, and time.
+- Daily boards and puzzle generation use UTC date keys. A run captures its UTC day when started and submits to that same board if it crosses midnight.
+- A stable run ID and atomic Firestore transaction prevent duplicate submissions. Public entries contain a random key, score values and non-account run metadata; they omit email, Firebase UID, Google name and photo.
+- Account deletion removes private cloud progress and the UID-to-key mapping. Public pseudonymous score entries remain; Firestore rules do not allow clients to delete leaderboard rows.
+- Energy remains device-local and is not included in cloud progress. The same device has one shared energy balance for its local FLUX data; another device has its own balance.
+
+## Required real-device checks
+
+After the preview SHA-1 is registered, install the newly built APK for package `com.gautamyash.flux` on a physical Android device and verify:
+
+- Google sign-in succeeds for an account, and cancel/network-error paths leave Guest play usable.
+- Existing Guest progress merges with that Google account; sign-out/account deletion preserve the local energy balance.
+- Global and Daily boards require Google sign-in; completed eligible runs submit once, ties retain the better score, and retries do not duplicate a run.
+- A Daily run started before UTC midnight submits to the captured date board.
+- Guest play and saved progress work offline; reconnect and leaderboard retry behavior work.

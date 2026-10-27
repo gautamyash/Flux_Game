@@ -1,0 +1,91 @@
+[debug] [2026-10-22T16:18:14.662Z] ----------------------------------------------------------------------
+[debug] [2026-10-22T16:18:14.665Z] Command:       C:\nvm4w\nodejs\node.exe C:\Users\gauta\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:indexes --project fluxgame-ed74a
+[debug] [2026-10-22T16:18:14.665Z] CLI Version:   15.34.1
+[debug] [2026-10-22T16:18:14.666Z] Platform:      win32
+[debug] [2026-10-22T16:18:14.666Z] Node Version:  v22.23.2
+[debug] [2026-10-22T16:18:14.666Z] Detected Agent: unknown
+[debug] [2026-10-22T16:18:14.666Z] Time:          Thu Oct 22 2026 21:48:14 GMT+0530 (India Standard Time)
+[debug] [2026-10-22T16:18:14.666Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-22T16:18:16.746Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-22T16:18:16.746Z] > authorizing via signed-in user (gautamyash37@gmail.com)
+[debug] [2026-10-22T16:18:16.746Z] [iam] checking project fluxgame-ed74a for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-10-22T16:18:16.760Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:16.760Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:16.761Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/fluxgame-ed74a:testIamPermissions [none]
+[debug] [2026-10-22T16:18:16.761Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/fluxgame-ed74a:testIamPermissions  x-goog-user-project=fluxgame-ed74a
+[debug] [2026-10-22T16:18:16.761Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/fluxgame-ed74a:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-10-22T16:18:18.420Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/fluxgame-ed74a:testIamPermissions 200
+[debug] [2026-10-22T16:18:18.420Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/fluxgame-ed74a:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'fluxgame-ed74a'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-10-22T16:18:18.425Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:18.425Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:18.425Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/fluxgame-ed74a/services/firestore.googleapis.com [none]
+[debug] [2026-10-22T16:18:18.426Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/fluxgame-ed74a/services/firestore.googleapis.com  x-goog-user-project=fluxgame-ed74a
+[debug] [2026-10-22T16:18:20.477Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/fluxgame-ed74a/services/firestore.googleapis.com 200
+[debug] [2026-10-22T16:18:20.477Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/fluxgame-ed74a/services/firestore.googleapis.com [omitted]
+[info] +  firestore: required API firestore.googleapis.com is enabled 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-10-22T16:18:20.502Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:20.502Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:20.502Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) [none]
+[debug] [2026-10-22T16:18:21.342Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) 200
+[debug] [2026-10-22T16:18:21.342Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) {"name":"projects/fluxgame-ed74a/databases/(default)","uid":"ecaecef8-7936-448c-a6d9-2eec224f921d","createTime":"2026-10-22T10:09:29.959342Z","updateTime":"2026-10-22T10:09:29.959342Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-10-22T15:18:20.388574Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"ILqopbKDzpcDMNfuwtfOzZcD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-10-22T16:18:21.344Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:21.344Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:21.344Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/fluxgame-ed74a:test [none]
+[debug] [2026-10-22T16:18:21.344Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/fluxgame-ed74a:test [omitted]
+[debug] [2026-10-22T16:18:23.104Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/fluxgame-ed74a:test 200
+[debug] [2026-10-22T16:18:23.104Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/fluxgame-ed74a:test {}
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[info] i  firestore: deploying indexes... 
+[debug] [2026-10-22T16:18:23.106Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.106Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.106Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2026-10-22T16:18:23.424Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2026-10-22T16:18:23.425Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/indexes {}
+[debug] [2026-10-22T16:18:23.425Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.425Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.425Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2026-10-22T16:18:23.600Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2026-10-22T16:18:23.600Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/fluxgame-ed74a/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[debug] [2026-10-22T16:18:23.600Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.600Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.600Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) [none]
+[debug] [2026-10-22T16:18:23.757Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) 200
+[debug] [2026-10-22T16:18:23.757Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default) {"name":"projects/fluxgame-ed74a/databases/(default)","uid":"ecaecef8-7936-448c-a6d9-2eec224f921d","createTime":"2026-10-22T10:09:29.959342Z","updateTime":"2026-10-22T10:09:29.959342Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-10-22T15:18:22.951899Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IMnowbODzpcDMNfuwtfOzZcD"}
+[debug] [2026-10-22T16:18:23.757Z] Creating new index: {"collectionGroup":"entries","queryScope":"COLLECTION","fields":[{"fieldPath":"score","order":"DESCENDING"},{"fieldPath":"solved","order":"DESCENDING"}]}
+[debug] [2026-10-22T16:18:23.758Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.758Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:23.758Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes [none]
+[debug] [2026-10-22T16:18:23.758Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes {"fields":[{"fieldPath":"score","order":"DESCENDING"},{"fieldPath":"solved","order":"DESCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-10-22T16:18:24.028Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes 200
+[debug] [2026-10-22T16:18:24.028Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes {"name":"projects/fluxgame-ed74a/databases/(default)/operations/S0U0aFhqT2dBQ0lDDCoDIDIzYTY0Mzk5ZDUyMi1lMmVhLWVjNzQtNzg3Mi0xMWRmNTFhZSQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-10-22T16:18:23.199320Z","index":"projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes/CICAgOjXh4EK","state":"INITIALIZING"}}
+[debug] [2026-10-22T16:18:24.028Z] Creating new index: {"collectionGroup":"entries","queryScope":"COLLECTION","fields":[{"fieldPath":"stars","order":"DESCENDING"},{"fieldPath":"moves","order":"ASCENDING"},{"fieldPath":"time","order":"ASCENDING"}]}
+[debug] [2026-10-22T16:18:24.029Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:24.029Z] Checked if tokens are valid: true, expires at: 1792689479208
+[debug] [2026-10-22T16:18:24.029Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes [none]
+[debug] [2026-10-22T16:18:24.029Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes {"fields":[{"fieldPath":"stars","order":"DESCENDING"},{"fieldPath":"moves","order":"ASCENDING"},{"fieldPath":"time","order":"ASCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-10-22T16:18:24.383Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes 200
+[debug] [2026-10-22T16:18:24.383Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes {"name":"projects/fluxgame-ed74a/databases/(default)/operations/S01vcFVpSmdBQ0lDDCoDIGNjOGZkNzA5OGE4Ni1jODJhLTAzNTQtZDA1NC05YTM2ZTkzNyQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-10-22T16:18:23.451588Z","index":"projects/fluxgame-ed74a/databases/(default)/collectionGroups/entries/indexes/CICAgJiUpoMK","state":"INITIALIZING"}}
+[info] +  firestore: deployed indexes in firestore.indexes.json successfully for (default) database 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/fluxgame-ed74a/overview
+[debug] [2026-10-22T16:18:29.733Z] Analytics tracking failed during error path: Timed out. {}
+[debug] [2026-10-22T16:18:29.734Z] Error: EBUSY: resource busy or locked, unlink 'C:\Users\gauta\Downloads\flux-game\firebase-debug.log'
+    at Object.unlinkSync (node:fs:1948:11)
+    at process.<anonymous> (C:\Users\gauta\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\cli.js:74:16)
+    at process.emit (node:events:531:35)
+    at process.exit (node:internal/process/per_thread:240:15)
+    at C:\Users\gauta\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\command.js:131:25
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: An unexpected error has occurred.

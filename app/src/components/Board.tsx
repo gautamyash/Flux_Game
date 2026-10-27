@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { SharedValue, useAnimatedProps } from 'react-native-reanimated';
+import Animated, { SharedValue, useAnimatedProps, useSharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { GameState, Level, countdownValue, frozenFor, gateOpen } from '../engine';
 import { Palette } from '../theme/tokens';
+import { stableCellAt } from './boardInput';
 import { CellGlyph, CellTile, CellVisual } from './Glyphs';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -226,6 +228,13 @@ const StaticTiles = React.memo(function StaticTiles({ level, size, t }: { level:
 
 export const Board = React.memo(function Board({ level, state, size, t, pulse = null, sweep = null, err = null, hints, large, preview, onBegin, onMove, onEnd, a11y }: BoardProps) {
   const geom = useMemo(() => boardGeom(size, level.size), [size, level.size]);
+  const latestHandlers = useRef({ onBegin, onMove, onEnd });
+  latestHandlers.current = { onBegin, onMove, onEnd };
+  const dispatchBegin = useCallback((x: number, y: number) => latestHandlers.current.onBegin?.(x, y), []);
+  const dispatchMove = useCallback((x: number, y: number) => latestHandlers.current.onMove?.(x, y), []);
+  const dispatchEnd = useCallback(() => latestHandlers.current.onEnd?.(), []);
+  const fingerCell = useSharedValue(-1);
+  const wasOutside = useSharedValue(false);
   const hintSet = useMemo(() => new Set(hints ?? []), [hints]);
   const visuals = useMemo(
     () => level.cells.map((_, i) => visualOf(level, state, i, { err, hints: hintSet, large })),
@@ -245,15 +254,33 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
     return { strokeDashoffset: seg - p * (L + seg) };
   });
 
+  const hasBegin = !!onBegin;
   const gesture = useMemo(() => {
-    if (!onBegin) return null;
+    if (!hasBegin) return null;
+    const { pad, cell, n } = geom;
     return Gesture.Pan()
-      .runOnJS(true)
       .minDistance(0)
-      .onBegin((e) => onBegin(e.x, e.y))
-      .onUpdate((e) => onMove?.(e.x, e.y))
-      .onFinalize(() => onEnd?.());
-  }, [onBegin, onMove, onEnd]);
+      .onBegin((e) => {
+        fingerCell.value = stableCellAt(e.x, e.y, pad, cell, n, -1);
+        wasOutside.value = e.x < pad || e.y < pad || e.x >= pad + n * cell || e.y >= pad + n * cell;
+        scheduleOnRN(dispatchBegin, e.x, e.y);
+      })
+      .onUpdate((e) => {
+        const outside = e.x < pad || e.y < pad || e.x >= pad + n * cell || e.y >= pad + n * cell;
+        if (outside) {
+          if (!wasOutside.value) scheduleOnRN(dispatchMove, e.x, e.y);
+          wasOutside.value = true;
+          return;
+        }
+        const next = stableCellAt(e.x, e.y, pad, cell, n, fingerCell.value);
+        const reentered = wasOutside.value;
+        wasOutside.value = false;
+        if (next === fingerCell.value && !reentered) return;
+        fingerCell.value = next;
+        scheduleOnRN(dispatchMove, e.x, e.y);
+      })
+      .onFinalize(() => scheduleOnRN(dispatchEnd));
+  }, [hasBegin, geom, fingerCell, wasOutside, dispatchBegin, dispatchMove, dispatchEnd]);
 
   const svg = (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute', left: 0, top: 0 }}>
