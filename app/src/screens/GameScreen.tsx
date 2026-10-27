@@ -88,7 +88,7 @@ function EnergyDepleted({ onHome }: { onHome: () => void }) {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <Icon name="bolt" size={56} color={t.accent} />
         <T v="h1" align="center">Out of energy</T>
-        <T v="body" align="center">You’ve used all {ENERGY_MAX} energy. It refills automatically every 30 minutes.</T>
+        <T v="body" align="center">You’ve used all {ENERGY_MAX} energy. It refills automatically every 45 minutes.</T>
         <T v="title" color={t.accent}>Next full refill in {countdown}</T>
         <Button label="Return to Home" onPress={onHome} />
       </View>

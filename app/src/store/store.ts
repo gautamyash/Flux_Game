@@ -121,9 +121,9 @@ export interface AppState {
   activeRunId: string | null;
 }
 
-export const ENERGY_MAX = 5;
+export const ENERGY_MAX = 30;
 export const ENERGY_COST_PER_RUN = 1;
-export const ENERGY_REFILL_MS = 30 * 60 * 1000;
+export const ENERGY_REFILL_MS = 45 * 60 * 1000;
 export const HINTS_MAX = 3;
 export const HINTS_REFILL_MS = 24 * 60 * 60 * 1000;
 

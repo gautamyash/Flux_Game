@@ -71,6 +71,20 @@ describeRules('local Firestore rules: pseudonymous leaderboard', () => {
     await assertFails(getDocs(collection(google('user-a'), 'leaderboardProfiles')));
   });
 
+  test('public display names are readable only to Google users and writable only by their key owner', async () => {
+    await createProfile();
+    const owner = google('user-a');
+    const nameRef = doc(owner, 'leaderboardNames', key);
+    await assertSucceeds(setDoc(nameRef, { displayName: 'Asha' }));
+    await assertSucceeds(getDoc(doc(google('user-b'), 'leaderboardNames', key)));
+    await assertFails(getDoc(doc(guest('user-b'), 'leaderboardNames', key)));
+    await assertFails(setDoc(doc(google('user-b'), 'leaderboardNames', key), { displayName: 'Other' }));
+    await assertFails(setDoc(nameRef, { displayName: 'private@example.com' }));
+    await assertFails(setDoc(nameRef, { displayName: 'Asha', email: 'private@example.com' }));
+    await assertSucceeds(setDoc(nameRef, { displayName: 'Asha Updated' }));
+    await assertSucceeds(deleteDoc(nameRef));
+  });
+
   test('score entry and run receipt must be an atomic matching transaction; duplicate receipts cannot be overwritten', async () => {
     await createProfile();
     const db = google('user-a');

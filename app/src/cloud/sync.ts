@@ -6,6 +6,7 @@ import { SKINS } from '../theme/tokens';
 import type { SkinId } from '../theme/tokens';
 import { cloudConfigured } from '../config';
 import { ensureFirebaseUser, transactRemote } from './auth';
+import { syncLeaderboardDisplayName } from './leaderboards';
 import { SyncData, mergeSync, sameSync, toSyncData } from './merge';
 
 export type SyncState = 'off' | 'idle' | 'syncing' | 'offline' | 'needs-login';
@@ -128,6 +129,7 @@ export function syncNow(): Promise<SyncResult> {
           epoch: safeLocal.epoch, clockMax: Math.max(cur.clockMax, safeLocal.clockMax),
         } as Partial<AppState>);
       }
+      await syncLeaderboardDisplayName(uid, safeLocal.profile.name || getState().account?.name || '');
       lastPushed = merged;
       setSyncedUid(uid);
       await flushStore();

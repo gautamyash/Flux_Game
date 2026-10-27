@@ -98,14 +98,19 @@ describe('load / save', () => {
 describe('energy', () => {
   const start = 1_800_000_000_000;
 
-  test('new players begin with five energy', () => {
-    expect(migrate({}).energy).toBe(5);
+  test('new players begin with thirty energy and existing balances are preserved', () => {
+    expect(ENERGY_MAX).toBe(30);
+    expect(ENERGY_REFILL_MS).toBe(2_700_000);
+    expect(migrate({}).energy).toBe(30);
+    const oldSave = migrate({ energy: 4, energyRefillStartedAt: start });
+    expect(oldSave.energy).toBe(4);
+    expect(oldSave.energyRefillStartedAt).toBe(start);
   });
 
   test('charges one energy once per initialized run ID', () => {
     expect(beginEnergyRun('run-a', start)).toBe(true);
     expect(beginEnergyRun('run-a', start + 1000)).toBe(true);
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
   });
 
   test('energy never goes below zero and empty players cannot start', () => {
@@ -118,7 +123,7 @@ describe('energy', () => {
   test('a remounted run and resumed run ID are not charged twice', () => {
     beginEnergyRun('saved-run', start);
     expect(beginEnergyRun('saved-run', start + 60_000)).toBe(true);
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
   });
 
   test('energy and its refill timestamp persist across reload', async () => {
@@ -126,13 +131,14 @@ describe('energy', () => {
     beginEnergyRun('persisted-run', start);
     await flushStore();
     await loadStore();
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
     expect(getState().energyRefillStartedAt).toBe(start);
   });
 
-  test('countdown uses elapsed time and refills fully after three hours', () => {
+  test('countdown uses elapsed time and refills fully after 45 minutes', () => {
     beginEnergyRun('timed-run', start);
     expect(energyCountdownMs(start + 60_000)).toBe(ENERGY_REFILL_MS - 60_000);
+    expect(energyCountdownMs(start + ENERGY_REFILL_MS - 1)).toBe(1);
     expect(refreshEnergy(start + ENERGY_REFILL_MS)).toBe(ENERGY_MAX);
     expect(getState().energyRefillStartedAt).toBeNull();
   });
@@ -147,7 +153,7 @@ describe('energy', () => {
     setGuest();
     setGoogleAccount({ uid: 'u1', email: '', name: 'Player', photo: null });
     signOutLocal();
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
     expect(getState().energyRefillStartedAt).toBe(start);
   });
 });

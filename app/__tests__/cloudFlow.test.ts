@@ -9,7 +9,7 @@ jest.mock('../src/cloud/sync', () => ({ syncNow: (...args: unknown[]) => mockSyn
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginWithGoogle, logout } from '../src/cloud/flow';
-import { applyCloud, beginEnergyRun, getState, loadStore, saveAccountProgressSnapshot, saveResume, setGoogleAccount, setGuest, setLastLevel } from '../src/store/store';
+import { applyCloud, beginEnergyRun, ENERGY_MAX, getState, loadStore, saveAccountProgressSnapshot, saveResume, setGoogleAccount, setGuest, setLastLevel } from '../src/store/store';
 
 const account = { uid: 'google-user', email: 'player@example.com', name: 'Player', photo: null };
 
@@ -63,7 +63,7 @@ describe('guest to Google progress sync orchestration', () => {
     expect(getState().mode).toBe('google');
     expect(getState().lastLevelId).toBe('1-1');
     expect(getState().resume?.runId).toBe('run-12345678');
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
     mockSyncNow.mockResolvedValueOnce({ ok: true });
     expect(await loginWithGoogle()).toEqual({ ok: true });
   });
@@ -81,7 +81,7 @@ describe('guest to Google progress sync orchestration', () => {
     expect(getState().account?.uid).toBe('google-b');
     expect(getState().levels).toEqual({});
     expect(getState().resume?.runId).toBe('run-12345678');
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
     const savedA = JSON.parse((await AsyncStorage.getItem('flux.v1.account.google-a')) as string);
     expect(savedA.uid).toBe('google-a');
     expect(savedA.progress.levels['1-1'].stars).toBe(3);
@@ -103,7 +103,7 @@ describe('guest to Google progress sync orchestration', () => {
     expect(getState().account?.uid).toBe('google-a');
     expect(getState().levels).toEqual({ '1-2': { stars: 2, moves: 7, time: 40, bonus: false, hintless: false } });
     expect(getState().resume?.runId).toBe('run-12345678');
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
   });
 
   test('failed cloud sync blocks logout from clearing unsynced local progress', async () => {

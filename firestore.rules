@@ -50,6 +50,19 @@ service cloud.firestore {
       allow delete: if googleUser() && request.auth.uid == uid;
     }
 
+    // Public names are looked up by random leaderboard key. They contain no UID or email,
+    // and only the Google owner of that key can create, change, or remove the mapping.
+    match /leaderboardNames/{key} {
+      allow get, list: if googleUser();
+      allow create, update: if ownsKey(key)
+        && request.resource.data.keys().hasOnly(['displayName'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 24
+        && !request.resource.data.displayName.matches('.*@.*');
+      allow delete: if ownsKey(key);
+    }
+
     // Scores expose only a random player key and puzzle results; no UID, email, or Google profile fields.
     match /leaderboards/{boardId}/entries/{entryId} {
       allow read: if googleUser() && validBoard(boardId);

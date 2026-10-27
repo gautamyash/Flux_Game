@@ -9,6 +9,7 @@ export type LeaderboardKind = 'global' | 'daily';
 export interface GlobalEntry { key: string; score: number; solved: number; lastRunId: string }
 export interface DailyEntry { key: string; stars: number; moves: number; time: number; lastRunId: string }
 export type LeaderboardEntry = GlobalEntry | DailyEntry;
+export type LeaderboardDisplayEntry = LeaderboardEntry & { displayName: string };
 export type SubmissionResult = 'submitted' | 'duplicate' | 'not-better' | 'unauthenticated' | 'unavailable' | 'rejected' | 'error';
 
 function firestore() {
@@ -39,6 +40,34 @@ async function getOrCreateKey(db: any, uid: string): Promise<string> {
   });
 }
 
+function cleanDisplayName(name: string): string {
+  const cleaned = name.trim().slice(0, 24);
+  // A profile may contain an email accidentally; never publish an email-like identifier.
+  return !cleaned || cleaned.includes('@') ? 'Player' : cleaned;
+}
+
+/** Publish the signed-in player's profile name under their random public leaderboard key. */
+export async function syncLeaderboardDisplayName(uid: string, displayName: string, createProfile = false): Promise<void> {
+  if (!cloudConfigured()) return;
+  const db = await leaderboardFirestore(uid);
+  if (!db) throw new Error('unauthenticated');
+  const { doc, getDoc, setDoc } = firestore();
+  const profileRef = doc(db, 'leaderboardProfiles', uid);
+  let key: string;
+  if (createProfile) {
+    key = await getOrCreateKey(db, uid);
+  } else {
+    const profile = await getDoc(profileRef);
+    if (!profile.exists()) return;
+    key = profile.data().key;
+  }
+  await setDoc(doc(db, 'leaderboardNames', key), { displayName: cleanDisplayName(displayName) });
+}
+
+export function mapLeaderboardNames<T extends LeaderboardEntry>(entries: T[], names: Record<string, string>): (T & { displayName: string })[] {
+  return entries.map((entry) => ({ ...entry, displayName: cleanDisplayName(names[entry.key] ?? '') }));
+}
+
 async function submit(kind: LeaderboardKind, boardId: string, runId: string, result: { score: number; solved: number } | { stars: number; moves: number; time: number }): Promise<SubmissionResult> {
   if (!cloudConfigured() || !validRunId(runId)) return 'unavailable';
   const state = getState();
@@ -48,6 +77,7 @@ async function submit(kind: LeaderboardKind, boardId: string, runId: string, res
     const db = await leaderboardFirestore(uid);
     if (!db) return 'unauthenticated';
     const key = await getOrCreateKey(db, uid);
+    await syncLeaderboardDisplayName(uid, getState().profile.name || getState().account?.name || '');
     const { doc, runTransaction, serverTimestamp } = firestore();
     const entryRef = doc(db, 'leaderboards', boardId, 'entries', key);
     const submissionRef = doc(db, 'leaderboards', boardId, 'submissions', runId);
@@ -84,13 +114,13 @@ export function submitDailyRun(day: string, runId: string, result: { stars: numb
   return submit('daily', day, runId, result);
 }
 
-export async function loadLeaderboard(kind: LeaderboardKind, day?: string): Promise<LeaderboardEntry[]> {
+export async function loadLeaderboard(kind: LeaderboardKind, day?: string): Promise<LeaderboardDisplayEntry[]> {
   const state = getState();
   if (state.mode !== 'google' || !state.account || !cloudConfigured()) throw new Error('unauthenticated');
   if (!(await ensureGoogleFirebaseUser(state.account.uid))) throw new Error('unauthenticated');
   const db = await leaderboardFirestore(state.account.uid);
   if (!db) throw new Error('unauthenticated');
-  const { collection, getDocsFromServer, limit, orderBy, query } = firestore();
+  const { collection, documentId, getDocsFromServer, getDoc, limit, orderBy, query, setDoc, where, doc } = firestore();
   const boardId = kind === 'global' ? 'global' : day;
   if (!boardId || (kind === 'daily' && !isValidDateKey(boardId))) throw new Error('invalid-board');
   const entries = collection(db, 'leaderboards', boardId, 'entries');
@@ -98,5 +128,28 @@ export async function loadLeaderboard(kind: LeaderboardKind, day?: string): Prom
     ? query(entries, orderBy('score', 'desc'), orderBy('solved', 'desc'), limit(100))
     : query(entries, orderBy('stars', 'desc'), orderBy('moves', 'asc'), orderBy('time', 'asc'), limit(100));
   const snapshot = await getDocsFromServer(q);
-  return snapshot.docs.map((d: any) => ({ key: d.id, ...d.data() } as LeaderboardEntry));
+  const rawEntries: LeaderboardEntry[] = snapshot.docs.map((d: any) => ({ key: d.id, ...d.data() } as LeaderboardEntry));
+  // Refresh the current player's name on leaderboard visits, including legacy entries that
+  // predate the public name mapping. The random key remains the only public player identifier.
+  const ownProfile = await getDoc(doc(db, 'leaderboardProfiles', state.account.uid));
+  if (ownProfile.exists()) {
+    const ownKey = ownProfile.data().key;
+    const ownName = state.profile.name || state.account.name || '';
+    if (rawEntries.some((entry) => entry.key === ownKey)) {
+      await setDoc(doc(db, 'leaderboardNames', ownKey), { displayName: cleanDisplayName(ownName) });
+    }
+  }
+  const names: Record<string, string> = {};
+  const keys = [...new Set(rawEntries.map((entry) => entry.key))];
+  for (let i = 0; i < keys.length; i += 30) {
+    const batch = keys.slice(i, i + 30);
+    if (!batch.length) continue;
+    const nameQuery = query(collection(db, 'leaderboardNames'), where(documentId(), 'in', batch));
+    const nameSnapshot = await getDocsFromServer(nameQuery);
+    for (const nameDoc of nameSnapshot.docs as any[]) {
+      const value = nameDoc.data()?.displayName;
+      if (typeof value === 'string') names[nameDoc.id] = value;
+    }
+  }
+  return mapLeaderboardNames(rawEntries, names);
 }

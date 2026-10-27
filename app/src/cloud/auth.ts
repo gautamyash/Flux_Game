@@ -184,9 +184,13 @@ export async function deleteCloudAccount(uid: string): Promise<DeleteCloudAccoun
     if (current?.uid !== uid || !current.providerData?.some((p: { providerId?: string }) => p.providerId === 'google.com')) {
       return { ok: false, error: 'Sign in to the Google account whose cloud data you want to delete, then retry.' };
     }
-    const { doc, writeBatch } = require('firebase/firestore');
+    const { doc, getDoc, writeBatch } = require('firebase/firestore');
+    const profile = await getDoc(doc(db, 'leaderboardProfiles', uid));
     const batch = writeBatch(db);
     batch.delete(doc(db, 'users', uid));
+    if (profile.exists() && typeof profile.data()?.key === 'string') {
+      batch.delete(doc(db, 'leaderboardNames', profile.data().key));
+    }
     batch.delete(doc(db, 'leaderboardProfiles', uid));
     await batch.commit();
 
@@ -195,9 +199,9 @@ export async function deleteCloudAccount(uid: string): Promise<DeleteCloudAccoun
     } catch (e) {
       const code = (e as { code?: string })?.code;
       if (code === 'auth/requires-recent-login') {
-        return { ok: false, error: 'Your cloud progress and private leaderboard profile were deleted. Firebase requires a recent sign-in to remove the Google login; sign in again, then retry deletion.' };
+        return { ok: false, error: 'Your cloud progress, private leaderboard profile, and public display name were deleted. Firebase requires a recent sign-in to remove the Google login; sign in again, then retry deletion.' };
       }
-      return { ok: false, error: 'Your cloud data was deleted, but Firebase could not remove the sign-in account. Sign in again and retry deletion.' };
+      return { ok: false, error: 'Your cloud data and public leaderboard display name were deleted, but Firebase could not remove the sign-in account. Sign in again and retry deletion.' };
     }
     await signOutCloud();
     return { ok: true };

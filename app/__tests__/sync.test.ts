@@ -6,11 +6,13 @@ jest.mock('../src/cloud/auth', () => ({
   ensureFirebaseUser: jest.fn(async () => true),
   transactRemote: (...args: unknown[]) => mockTransaction(...args),
 }));
+jest.mock('../src/cloud/leaderboards', () => ({ syncLeaderboardDisplayName: jest.fn(async () => undefined) }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncNow } from '../src/cloud/sync';
+import { syncLeaderboardDisplayName } from '../src/cloud/leaderboards';
 import { mergeSync, toSyncData } from '../src/cloud/merge';
-import { applyCloud, getState, loadStore, setGoogleAccount, setGuest, saveResume, beginEnergyRun, migrate } from '../src/store/store';
+import { applyCloud, ENERGY_MAX, getState, loadStore, setGoogleAccount, setGuest, saveResume, beginEnergyRun, migrate } from '../src/store/store';
 import type { SyncData } from '../src/cloud/merge';
 
 const record = (stars: number) => ({ stars, moves: 5, time: 40, bonus: false, hintless: false });
@@ -43,7 +45,14 @@ describe('transactional progress synchronization', () => {
     const retried = JSON.parse(mockCloud.json as string) as SyncData;
     expect(retried.levels).toEqual(first.levels);
     expect(getState().resume?.runId).toBe('active-12345678');
-    expect(getState().energy).toBe(4);
+    expect(getState().energy).toBe(ENERGY_MAX - 1);
+  });
+
+  test('profile name changes are published by cloud sync and remain sourced from the profile', async () => {
+    applyCloud({ profile: { ...getState().profile, name: 'Asha' } });
+    setGoogleAccount(account);
+    expect(await syncNow()).toEqual({ ok: true });
+    expect(syncLeaderboardDisplayName).toHaveBeenCalledWith(account.uid, 'Asha');
   });
 
   test('existing account merge keeps progress ahead on either side', async () => {

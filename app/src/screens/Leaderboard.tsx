@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { cloudConfigured } from '../config';
 import { ensureGoogleFirebaseUser } from '../cloud/auth';
-import { DailyEntry, GlobalEntry, LeaderboardKind, LeaderboardEntry, loadLeaderboard } from '../cloud/leaderboards';
+import { DailyEntry, GlobalEntry, LeaderboardKind, LeaderboardDisplayEntry, loadLeaderboard } from '../cloud/leaderboards';
 import { Button, Card, Screen, T, TopBar } from '../components/ui';
 import { useNav } from '../nav/Nav';
 import { dateKey, useStore } from '../store/store';
@@ -19,7 +19,7 @@ function dailyTime(seconds: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function EntryRow({ entry, kind, rank }: { entry: LeaderboardEntry; kind: LeaderboardKind; rank: number }) {
+function EntryRow({ entry, kind, rank }: { entry: LeaderboardDisplayEntry; kind: LeaderboardKind; rank: number }) {
   const { t } = useTheme();
   const score = kind === 'global'
     ? `${(entry as GlobalEntry).score} stars · ${(entry as GlobalEntry).solved} levels`
@@ -28,7 +28,7 @@ function EntryRow({ entry, kind, rank }: { entry: LeaderboardEntry; kind: Leader
     <Card style={{ paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
       <T v="num" color={rank <= 3 ? t.accent : t.text2}>{rank}</T>
       <View style={{ flex: 1 }}>
-        <T v="title">Player {entry.key.slice(0, 5).toUpperCase()}</T>
+        <T v="title">{entry.displayName}</T>
         <T v="cap">{score}</T>
       </View>
     </Card>
@@ -40,7 +40,7 @@ export function LeaderboardScreen({ kind }: { kind: LeaderboardKind }) {
   const { t } = useTheme();
   const mode = useStore((s) => s.mode);
   const account = useStore((s) => s.account);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [entries, setEntries] = useState<LeaderboardDisplayEntry[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'error' | 'offline' | 'unauthenticated'>('loading');
   const [retry, setRetry] = useState(0);
   const [day] = useState(() => dateKey());

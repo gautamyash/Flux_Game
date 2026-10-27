@@ -20,6 +20,8 @@ function EnergyIndicator() {
   const { t } = useTheme();
   const energy = useStore((s) => s.energy);
   const refillAt = useStore((s) => s.energyRefillStartedAt);
+  const pipWidth = Math.min(8, 72 / ENERGY_MAX);
+  const pipGap = ENERGY_MAX > 10 ? 1 : 2;
   const [now, setNow] = useState(trustedNow());
   useEffect(() => {
     refreshEnergy();
@@ -33,8 +35,8 @@ function EnergyIndicator() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
         <Icon name="bolt" size={16} color={t.accent} fill={t.accent} />
         <T v="cap" color={t.text}>{energy}/{ENERGY_MAX}</T>
-        <View style={{ flexDirection: 'row', gap: 2, marginLeft: 2 }}>
-          {Array.from({ length: ENERGY_MAX }, (_, i) => <View key={i} style={{ width: 8, height: 5, borderRadius: 3, backgroundColor: i < energy ? t.accent : t.grid }} />)}
+        <View style={{ flexDirection: 'row', gap: pipGap, marginLeft: 2 }}>
+          {Array.from({ length: ENERGY_MAX }, (_, i) => <View key={i} style={{ width: pipWidth, height: 5, borderRadius: 3, backgroundColor: i < energy ? t.accent : t.grid }} />)}
         </View>
       </View>
       {remaining !== null ? <T v="cap" color={t.text2}>Next energy in {energyTime(remaining)}</T> : <T v="cap" color={t.text2}>Full</T>}

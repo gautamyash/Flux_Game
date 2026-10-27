@@ -5,6 +5,7 @@ const mockUser = { uid: 'google-a', providerData: [{ providerId: 'google.com' }]
 const mockAuth = { currentUser: mockUser, authStateReady: async () => undefined };
 const mockBatch = { delete: jest.fn(), commit: jest.fn(async () => undefined) };
 const mockDeleteUser = jest.fn(async (_user?: unknown) => undefined);
+const mockProfile = { exists: () => true, data: () => ({ key: 'Abcdefghijklmnop1234' }) };
 
 jest.mock('firebase/app', () => ({ getApps: () => [], getApp: () => ({}), initializeApp: () => ({}) }));
 jest.mock('firebase/auth', () => ({
@@ -16,6 +17,7 @@ jest.mock('firebase/auth', () => ({
 jest.mock('firebase/firestore', () => ({
   initializeFirestore: () => ({}), getFirestore: () => ({}),
   doc: (_db: unknown, ...path: string[]) => path.join('/'),
+  getDoc: jest.fn(async () => mockProfile),
   writeBatch: () => mockBatch,
 }));
 jest.mock('@react-native-google-signin/google-signin', () => ({ GoogleSignin: { configure: jest.fn(), signOut: jest.fn() } }));
@@ -34,7 +36,7 @@ describe('cloud account deletion', () => {
 
   test('deletes private progress and profile atomically before removing the Auth user', async () => {
     expect(await deleteCloudAccount('google-a')).toEqual({ ok: true });
-    expect(mockBatch.delete.mock.calls).toEqual([['users/google-a'], ['leaderboardProfiles/google-a']]);
+    expect(mockBatch.delete.mock.calls).toEqual([['users/google-a'], ['leaderboardNames/Abcdefghijklmnop1234'], ['leaderboardProfiles/google-a']]);
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
     expect(mockDeleteUser).toHaveBeenCalledWith(mockUser);
   });

@@ -20,6 +20,7 @@ export function AccountCard() {
   const { t } = useTheme();
   const mode = useStore((s) => s.mode);
   const account = useStore((s) => s.account);
+  const profileName = useStore((s) => s.profile.name);
   const sync = useSyncExternalStore(subscribeSync, getSyncStatus);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -62,7 +63,7 @@ export function AccountCard() {
       <T v="cap">ACCOUNT</T>
       {mode === 'google' && account ? (
         <>
-          <T v="title">{account.name || 'Google account'}</T>
+          <T v="title">{profileName || account.name || 'Google account'}</T>
           <T v="small">{account.email}</T>
           <T v="cap" color={sync.state === 'offline' || sync.state === 'needs-login' ? t.danger : t.success}>{statusText}</T>
           <T v="cap">Your progress is saved to this account and follows you to any phone.</T>
@@ -90,7 +91,7 @@ export function AccountCard() {
             <T v="body">
               {confirm === 'out'
                 ? 'Your progress stays saved in your Google account. This phone will be cleared; sign in again any time to get it back.'
-                : 'This permanently deletes your cloud progress and private leaderboard profile, then signs you out. Submitted leaderboard scores remain under a random pseudonym. This cannot be undone.'}
+                : 'This permanently deletes your cloud progress and private leaderboard profile, removes your displayed leaderboard name, then signs you out. Submitted scores remain under a random pseudonym. This cannot be undone.'}
             </T>
             <Button label={confirm === 'out' ? 'Sign out' : 'Delete and sign out'} variant={confirm === 'out' ? 'primary' : 'destructive'} onPress={() => void (confirm === 'out' ? doOut() : doDelete())} />
             <Button label="Cancel" variant="ghost" onPress={() => setConfirm(null)} />
