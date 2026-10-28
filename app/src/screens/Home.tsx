@@ -48,7 +48,7 @@ function Tile({ icon, label, sub, onPress }: { icon: IconName; label: string; su
   const { t } = useTheme();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ flex: 1 }}>
-      <Card style={{ padding: 16, gap: 8, minHeight: 96 }}>
+      <Card style={{ flex: 1, padding: 16, gap: 8, minHeight: 96 }}>
         <Icon name={icon} size={26} color={t.accent} />
         <T v="title">{label}</T>
         {sub ? <T v="cap">{sub}</T> : null}
