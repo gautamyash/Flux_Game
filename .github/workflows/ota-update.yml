@@ -20,6 +20,11 @@ on:
         description: Release note for this update
         type: string
         required: true
+      native_compatibility_confirmed:
+        description: Confirm the installed APKs on this channel support the update's native runtime
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -29,7 +34,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate app before OTA publishing
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Check out selected commit
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Jest tests
+        run: npx jest --ci
+
+      - name: Verify Android bundle
+        run: npx expo export --platform android --output-dir /tmp/export
+
   publish:
+    needs: validate
     if: github.event_name == 'push' || inputs.channel == 'preview' || (inputs.channel == 'production' && github.ref == 'refs/heads/main')
     name: Publish Android ${{ github.event_name == 'push' && 'preview' || inputs.channel }} update
     runs-on: ubuntu-latest
@@ -93,6 +130,17 @@ jobs:
         run: |
           if [[ -z "$EXPO_TOKEN" ]]; then
             echo "::error::Add EXPO_TOKEN as a GitHub Actions secret before publishing updates."
+            exit 1
+          fi
+
+      - name: Require manual native compatibility review
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          CONFIRMED: ${{ inputs.native_compatibility_confirmed }}
+        run: |
+          if [[ "$CONFIRMED" != "true" ]]; then
+            echo "::error::Confirm that installed APKs on the selected channel support this update. Native changes require a new APK."
             exit 1
           fi
 

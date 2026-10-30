@@ -3,13 +3,15 @@ import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { SharedValue, useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { GameState, Level, countdownValue, frozenFor, gateOpen } from '../engine';
 import { Palette } from '../theme/tokens';
 import { stableCellAt } from './boardInput';
 import { CellGlyph, CellTile, CellVisual } from './Glyphs';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedLine = Animated.createAnimatedComponent(Line);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface BoardGeom {
   size: number;
@@ -195,6 +197,8 @@ export interface BoardProps {
   large?: boolean;
   /** hide path-end cursor (previews) */
   preview?: boolean;
+  /** disable drawing input and its visual preview while an overlay is open */
+  drawingEnabled?: boolean;
   onBegin?: (x: number, y: number) => void;
   onMove?: (x: number, y: number) => void;
   onEnd?: () => void;
@@ -226,7 +230,7 @@ const StaticTiles = React.memo(function StaticTiles({ level, size, t }: { level:
   );
 });
 
-export const Board = React.memo(function Board({ level, state, size, t, pulse = null, sweep = null, err = null, hints, large, preview, onBegin, onMove, onEnd, a11y }: BoardProps) {
+export const Board = React.memo(function Board({ level, state, size, t, pulse = null, sweep = null, err = null, hints, large, preview, drawingEnabled = true, onBegin, onMove, onEnd, a11y }: BoardProps) {
   const geom = useMemo(() => boardGeom(size, level.size), [size, level.size]);
   const latestHandlers = useRef({ onBegin, onMove, onEnd });
   latestHandlers.current = { onBegin, onMove, onEnd };
@@ -235,6 +239,9 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
   const dispatchEnd = useCallback(() => latestHandlers.current.onEnd?.(), []);
   const fingerCell = useSharedValue(-1);
   const wasOutside = useSharedValue(false);
+  const fingerX = useSharedValue(0);
+  const fingerY = useSharedValue(0);
+  const previewActive = useSharedValue(false);
   const hintSet = useMemo(() => new Set(hints ?? []), [hints]);
   const visuals = useMemo(
     () => level.cells.map((_, i) => visualOf(level, state, i, { err, hints: hintSet, large })),
@@ -254,18 +261,47 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
     return { strokeDashoffset: seg - p * (L + seg) };
   });
 
+  const teleEntrance = state.path.length > 1 ? state.path[state.path.length - 2] : -1;
+  const justTeleported = teleEntrance >= 0 && level.cells[teleEntrance].kind === 'tele' && level.partner[teleEntrance] === state.head;
+  const previewVisible = (x: number, y: number) => {
+    'worklet';
+    const col = Math.floor((x - geom.pad) / geom.cell);
+    const row = Math.floor((y - geom.pad) / geom.cell);
+    if (col < 0 || row < 0 || col >= geom.n || row >= geom.n) return false;
+    const target = row * geom.n + col;
+    if (justTeleported && target === teleEntrance) return false;
+    const headRow = Math.floor(state.head / geom.n);
+    const headCol = state.head % geom.n;
+    return Math.abs(row - headRow) + Math.abs(col - headCol) <= 1;
+  };
+  const previewLineProps = useAnimatedProps(() => {
+    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewVisible(fingerX.value, fingerY.value);
+    return { x2: fingerX.value, y2: fingerY.value, opacity: visible ? 0.78 : 0 };
+  });
+  const previewDotProps = useAnimatedProps(() => {
+    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewVisible(fingerX.value, fingerY.value);
+    return { cx: fingerX.value, cy: fingerY.value, opacity: visible ? 1 : 0 };
+  });
+
   const hasBegin = !!onBegin;
   const gesture = useMemo(() => {
     if (!hasBegin) return null;
     const { pad, cell, n } = geom;
     return Gesture.Pan()
+      .enabled(drawingEnabled && state.status === 'playing')
       .minDistance(0)
       .onBegin((e) => {
+        fingerX.value = e.x;
+        fingerY.value = e.y;
+        previewActive.value = e.x >= pad && e.y >= pad && e.x < pad + n * cell && e.y < pad + n * cell;
         fingerCell.value = stableCellAt(e.x, e.y, pad, cell, n, -1);
         wasOutside.value = e.x < pad || e.y < pad || e.x >= pad + n * cell || e.y >= pad + n * cell;
         scheduleOnRN(dispatchBegin, e.x, e.y);
       })
       .onUpdate((e) => {
+        fingerX.value = e.x;
+        fingerY.value = e.y;
+        previewActive.value = true;
         const outside = e.x < pad || e.y < pad || e.x >= pad + n * cell || e.y >= pad + n * cell;
         if (outside) {
           if (!wasOutside.value) scheduleOnRN(dispatchMove, e.x, e.y);
@@ -279,8 +315,11 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
         fingerCell.value = next;
         scheduleOnRN(dispatchMove, e.x, e.y);
       })
-      .onFinalize(() => scheduleOnRN(dispatchEnd));
-  }, [hasBegin, geom, fingerCell, wasOutside, dispatchBegin, dispatchMove, dispatchEnd]);
+      .onFinalize(() => {
+        previewActive.value = false;
+        scheduleOnRN(dispatchEnd);
+      });
+  }, [hasBegin, drawingEnabled, state.status, geom, fingerCell, wasOutside, fingerX, fingerY, previewActive, dispatchBegin, dispatchMove, dispatchEnd]);
 
   const svg = (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute', left: 0, top: 0 }}>
@@ -308,6 +347,17 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
           animatedProps={sweepProps}
         />
       ) : null}
+      {drawingEnabled && state.status === 'playing' ? (
+        <AnimatedLine
+          x1={head.x}
+          y1={head.y}
+          stroke={t.pathB}
+          strokeWidth={pathW * 0.62}
+          strokeDasharray={`${f(geom.cell * 0.12)} ${f(geom.cell * 0.14)}`}
+          strokeLinecap="round"
+          animatedProps={previewLineProps}
+        />
+      ) : null}
       {visuals.map((v, i) => {
         if (v.kind === 'empty' && !v.locked && !v.err && !v.hint) return null;
         if (v.kind === 'dead' && !v.err) return null;
@@ -320,6 +370,15 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
           <Circle cx={head.x} cy={head.y} r={geom.cell * 0.38} fill="none" stroke={t.raised} strokeWidth={geom.cell * 0.11} />
           <Circle cx={head.x} cy={head.y} r={geom.cell * 0.38} fill="none" stroke={t.pathB} strokeWidth={geom.cell * 0.06} />
         </G>
+      ) : null}
+      {drawingEnabled && state.status === 'playing' ? (
+        <AnimatedCircle
+          r={geom.cell * 0.055}
+          fill={t.pathB}
+          stroke="#FFFFFF"
+          strokeWidth={geom.cell * 0.025}
+          animatedProps={previewDotProps}
+        />
       ) : null}
     </Svg>
   );

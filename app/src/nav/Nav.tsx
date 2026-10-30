@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { BackHandler, View } from 'react-native';
 import Animated, { FadeIn, SlideInRight } from 'react-native-reanimated';
 import { dateKey, useSettings } from '../store/store';
+import { stackHasActiveGame } from './routeSafety';
 
 export type GameSource =
   | { kind: 'classic'; levelId: string }
@@ -36,6 +37,7 @@ export type Route =
 
 interface NavApi {
   route: Route;
+  hasActiveGame: boolean;
   push: (r: Route) => void;
   pop: () => void;
   replace: (r: Route) => void;
@@ -108,7 +110,8 @@ export function NavProvider({ initial, render }: { initial: Route; render: (r: R
   }, [stack.length, pop]);
 
   const top = stack[stack.length - 1];
-  const api = useMemo<NavApi>(() => ({ route: top.r, push, pop, replace, reset, startGame, replaceGame, canGoBack: stack.length > 1 }), [top, push, pop, replace, reset, startGame, replaceGame, stack.length]);
+  const hasActiveGame = stackHasActiveGame(stack);
+  const api = useMemo<NavApi>(() => ({ route: top.r, hasActiveGame, push, pop, replace, reset, startGame, replaceGame, canGoBack: stack.length > 1 }), [top, hasActiveGame, push, pop, replace, reset, startGame, replaceGame, stack.length]);
   const entering = settings.reduceMotion ? undefined : dir === 'push' ? SlideInRight.duration(240) : FadeIn.duration(180);
 
   return (

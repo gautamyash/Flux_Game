@@ -7,6 +7,7 @@ import { AVATAR_COLORS, currentLevelId, dateKey, ENERGY_MAX, ENERGY_REFILL_MS, r
 import { useTheme } from '../theme/ThemeProvider';
 import { Pressable } from 'react-native';
 import { useEffect, useState } from 'react';
+import { UpdateNotice } from '../components/UpdateNotice';
 
 function energyTime(ms: number): string {
   const total = Math.ceil(ms / 1000);
@@ -86,6 +87,7 @@ export function HomeScreen() {
       </View>
       <View style={{ alignItems: 'flex-end', paddingBottom: 6 }}><EnergyIndicator /></View>
       <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
+        <UpdateNotice />
         {resumeOk && resume ? (
           <Card style={{ padding: 20, gap: 12 }} bg={t.accentSoft} borderColor={t.accent}>
             <T v="cap" color={t.accent}>RESUME</T>

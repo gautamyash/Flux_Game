@@ -11,6 +11,7 @@ import { Badge } from '../../components/Badge';
 import { CAMPAIGN_WORLDS, CHAPTERS } from '../../lib/levels';
 import { ResultData, MAX_HINTS } from './useGame';
 import type { SubmissionResult } from '../../cloud/leaderboards';
+import { UpdateNotice } from '../../components/UpdateNotice';
 
 export function ResultRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
   const { t } = useTheme();
@@ -134,6 +135,7 @@ export function PauseSheet({ onResume, onRestart, onHowTo, onSettings, onQuit }:
         <T v="h3">Paused</T>
         <Button label="Resume" onPress={onResume} />
         <Button label="Restart level" variant="secondary" onPress={onRestart} />
+        <UpdateNotice />
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Button label="How to play" variant="secondary" height={48} flex={1} onPress={onHowTo} />
           <Button label="Settings" variant="secondary" height={48} flex={1} onPress={onSettings} />
@@ -201,6 +203,7 @@ export function RunOver({ kind, score, best, onAgain, onHome }: { kind: 'rush' |
         <T v="cap" color={t.accent}>{kind === 'rush' ? 'TIME’S UP' : 'RUN OVER'}</T>
         <T v="display">{score}</T>
         <T v="body">puzzles solved{score >= best && score > 0 ? ' · new best!' : ` · best ${best}`}</T>
+        <UpdateNotice />
         <View style={{ alignSelf: 'stretch', gap: 8 }}>
           <Button label="Play again" onPress={onAgain} />
           <Button label="Home" variant="ghost" onPress={onHome} />

@@ -14,6 +14,7 @@ import { SKINS, boardPalette, SkinId } from '../theme/tokens';
 import { skinUnlocked } from '../lib/levels';
 import { AccountCard } from './AccountCard';
 import { practiceLevel } from '../lib/procedural';
+import { UpdateNotice } from '../components/UpdateNotice';
 
 function Row({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -54,6 +55,7 @@ export function SettingsScreen() {
       <TopBar title="Settings" onBack={nav.pop} />
       <ScrollView contentContainerStyle={{ gap: 12, paddingVertical: 8 }} keyboardShouldPersistTaps="handled">
         <AccountCard />
+        <UpdateNotice showWhenUpToDate />
         <Card style={{ padding: 16, gap: 12 }}>
           <T v="cap">PLAYER</T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

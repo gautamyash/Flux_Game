@@ -26,6 +26,7 @@ import { AchievementsScreen, CellsScreen, HowToScreen, StatsScreen } from './src
 import { SettingsScreen, ThemesScreen } from './src/screens/Settings';
 import { LeaderboardScreen } from './src/screens/Leaderboard';
 import { CampaignScreen } from './src/screens/Campaign';
+import { UpdateProvider, useUpdateManager } from './src/lib/UpdateProvider';
 
 let lastHandled = '';
 /** opens the right screen when a reminder is tapped (also when it cold-started the app) */
@@ -75,6 +76,13 @@ function renderRoute(r: Route): React.ReactNode {
   }
 }
 
+function UpdateRouteSafety() {
+  const { hasActiveGame } = useNav();
+  const { setGameActive } = useUpdateManager();
+  useEffect(() => { setGameActive(hasActiveGame); }, [hasActiveGame, setGameActive]);
+  return null;
+}
+
 function Root() {
   const { t, isDark } = useTheme();
   const loaded = useStore((s) => s.loaded);
@@ -88,7 +96,7 @@ function Root() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      {loaded ? <NavProvider initial={{ name: 'splash' }} render={(r) => (<><NotifRouter />{renderRoute(r)}</>)} /> : null}
+      {loaded ? <UpdateProvider><NavProvider initial={{ name: 'splash' }} render={(r) => (<><UpdateRouteSafety /><NotifRouter />{renderRoute(r)}</>)} /></UpdateProvider> : null}
     </View>
   );
 }

@@ -165,7 +165,7 @@ export function GameScreen({ source, runId, dailyDay }: { source: GameSource; ru
         {fit.side > 0 ? (
           <Animated.View style={shakeStyle}>
             <Board level={level} state={st} size={fit.side} t={board} pulse={g.pulse} sweep={g.sweep} err={g.errCell}
-              hints={g.hintCells} large={settings.largeNumbers} a11y={a11y}
+              hints={g.hintCells} large={settings.largeNumbers} a11y={a11y} drawingEnabled={!g.overlayOpen && !reader}
               onBegin={g.onBegin} onMove={g.onMove} onEnd={g.onEnd} />
           </Animated.View>
         ) : null}

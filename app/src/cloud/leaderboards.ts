@@ -12,6 +12,22 @@ export type LeaderboardEntry = GlobalEntry | DailyEntry;
 export type LeaderboardDisplayEntry = LeaderboardEntry & { displayName: string };
 export type SubmissionResult = 'submitted' | 'duplicate' | 'not-better' | 'unauthenticated' | 'unavailable' | 'rejected' | 'error';
 
+const pendingSubmissions = new Set<Promise<SubmissionResult>>();
+
+function trackSubmission(request: Promise<SubmissionResult>) {
+  pendingSubmissions.add(request);
+  void request.then(
+    () => pendingSubmissions.delete(request),
+    () => pendingSubmissions.delete(request),
+  );
+  return request;
+}
+
+/** Wait for score writes already started by the active game before reloading the JS runtime. */
+export async function waitForPendingLeaderboardSubmissions() {
+  while (pendingSubmissions.size) await Promise.all([...pendingSubmissions]);
+}
+
 function firestore() {
   return require('firebase/firestore');
 }
@@ -105,13 +121,13 @@ async function submit(kind: LeaderboardKind, boardId: string, runId: string, res
 /** Submit the existing all-level star total after a successfully completed Classic or Master puzzle. */
 export function submitGlobalRun(runId: string): Promise<SubmissionResult> {
   const levels = getState().levels;
-  return submit('global', 'global', runId, { score: totalStars(levels), solved: solvedCount(levels) });
+  return trackSubmission(submit('global', 'global', runId, { score: totalStars(levels), solved: solvedCount(levels) }));
 }
 
 /** Submit the existing Daily result after a successfully completed Daily puzzle. */
 export function submitDailyRun(day: string, runId: string, result: { stars: number; moves: number; time: number }): Promise<SubmissionResult> {
   if (!isValidDateKey(day)) return Promise.resolve('unavailable');
-  return submit('daily', day, runId, result);
+  return trackSubmission(submit('daily', day, runId, result));
 }
 
 export async function loadLeaderboard(kind: LeaderboardKind, day?: string): Promise<LeaderboardDisplayEntry[]> {
