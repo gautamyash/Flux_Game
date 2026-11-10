@@ -21,7 +21,7 @@ function dailyTime(seconds: number): string {
 
 function EntryRow({ entry, kind, rank }: { entry: LeaderboardDisplayEntry; kind: LeaderboardKind; rank: number }) {
   const { t } = useTheme();
-  const score = kind === 'global'
+  const score = kind === 'global' || kind === 'campaign'
     ? `${(entry as GlobalEntry).score} stars · ${(entry as GlobalEntry).solved} levels`
     : `${(entry as DailyEntry).stars} stars · ${(entry as DailyEntry).moves} moves · ${dailyTime((entry as DailyEntry).time)}`;
   return (
@@ -44,7 +44,7 @@ export function LeaderboardScreen({ kind }: { kind: LeaderboardKind }) {
   const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'error' | 'offline' | 'unauthenticated'>('loading');
   const [retry, setRetry] = useState(0);
   const [day] = useState(() => dateKey());
-  const title = kind === 'global' ? 'Global Leaderboard' : 'Daily Leaderboard';
+  const title = kind === 'global' ? 'Global Leaderboard' : kind === 'campaign' ? 'Campaign Leaderboard' : 'Daily Leaderboard';
   const load = useCallback(async () => {
     if (mode !== 'google' || !account) { setEntries([]); setState('unauthenticated'); return; }
     if (!cloudConfigured()) { setEntries([]); setState('error'); return; }
@@ -66,11 +66,11 @@ export function LeaderboardScreen({ kind }: { kind: LeaderboardKind }) {
   else if (state === 'error' && !cloudConfigured()) message = 'Leaderboards are not configured in this build yet.';
   else if (state === 'error') message = 'Could not load this leaderboard. Try again in a moment.';
   else if (state === 'offline') message = 'A network connection is needed to load leaderboards. Your local progress is safe.';
-  else if (state === 'empty') message = kind === 'daily' ? 'No scores submitted for today yet. Complete today’s puzzle while signed in to appear here.' : 'No scores yet. Complete a Classic or Master puzzle while signed in to appear here.';
+  else if (state === 'empty') message = kind === 'daily' ? 'No scores submitted for today yet. Complete today’s puzzle while signed in to appear here.' : kind === 'campaign' ? 'No campaign scores yet. Complete campaign levels while signed in to appear here.' : 'No scores yet. Complete a Classic or Master puzzle while signed in to appear here.';
 
   return (
     <Screen>
-      <TopBar title={title} sub={kind === 'daily' ? `UTC ${day}` : 'Top 100'} onBack={nav.pop} />
+      <TopBar title={title} sub={kind === 'daily' ? `UTC ${day}` : kind === 'campaign' ? 'Campaign stars · Top 100' : 'Top 100'} onBack={nav.pop} />
       {state === 'loading' ? (
         <View accessibilityRole="progressbar" accessibilityLabel="Loading leaderboard" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <ActivityIndicator color={t.accent} />

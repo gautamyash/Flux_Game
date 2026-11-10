@@ -24,7 +24,7 @@ export type Route =
   | { name: 'intro'; chapter: number }
   | { name: 'game'; source: GameSource; runId: string; dailyDay?: string }
   | { name: 'daily' }
-  | { name: 'leaderboard'; kind: 'global' | 'daily' }
+  | { name: 'leaderboard'; kind: 'global' | 'campaign' | 'daily' }
   | { name: 'campaign' }
   | { name: 'modes' }
   | { name: 'howto' }

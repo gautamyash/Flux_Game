@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, AppState } from 'react-native';
 import { useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import {
-  GameState, Level, MoveEvent, Session, createSession, current, enteredCells, eventMessage, invalidMessage, restart,
+  GameState, Level, MoveEvent, Session, MAX_UNDOS_PER_RUN, createSession, current, enteredCells, eventMessage, invalidMessage, restart,
   hintFor, retractTarget, sessionMove, sessionUndo, starsFor, validateMove,
 } from '../../engine';
 import { boardGeom, cellAt, cellCenter } from '../../components/Board';
@@ -12,7 +12,7 @@ import { campaignComplete, campaignLevelNumber, getLevel, mechanicsOf, newlyUnlo
 import { evaluateAchievements } from '../../lib/achievements';
 import { haptic } from '../../lib/haptics';
 import { sfx } from '../../lib/sound';
-import { submitDailyRun, submitGlobalRun } from '../../cloud/leaderboards';
+import { submitCampaignRun, submitDailyRun, submitGlobalRun } from '../../cloud/leaderboards';
 import type { SubmissionResult } from '../../cloud/leaderboards';
 import {
   HINTS_MAX, HINTS_REFILL_MS, SolveOutcome, adoptSavedRun, beginEnergyRun, dateKey, getState, isRunActive, markSeen, refreshHints, saveResume, recordClassicSolve, recordDailySolve, recordHint,
@@ -144,12 +144,14 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     const rs = getState().resume;
     const canResume = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily' || source.kind === 'campaign';
     if (canResume && rs && (!rs.runId || rs.runId === runId) && rs.levelId === level.id && (source.kind !== 'daily' || rs.day === runDay)) {
+      sess = createSession(level, rs.undoRemaining);
       for (const c of rs.entered) {
         const m = sessionMove(sess, c);
         if (!m.result.ok) break;
         sess = m.session;
       }
-      restored = sess.history.length > 1 && current(sess).status === 'playing';
+      restored = current(sess).status === 'playing'
+        && (sess.history.length > 1 || (rs.undoRemaining ?? MAX_UNDOS_PER_RUN) < MAX_UNDOS_PER_RUN);
       if (!restored) sess = createSession(level);
     }
     apply(sess);
@@ -198,11 +200,11 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     if (!resumable || !isRunActive(runId)) return;
     const cur = current(sessRef.current);
     const entered = enteredCells(level, cur);
-    if (cur.status !== 'playing' || entered.length === 0) {
+    if (cur.status !== 'playing' || (entered.length === 0 && sessRef.current.undosRemaining === MAX_UNDOS_PER_RUN)) {
       if (getState().resume?.levelId === level.id) saveResume(null);
       return;
     }
-    saveResume({ runId, source, levelId: level.id, day: runDay ?? dateKey(), entered, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
+    saveResume({ runId, source, levelId: level.id, day: runDay ?? dateKey(), entered, undoRemaining: sessRef.current.undosRemaining, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
   }, [resumable, level, source, runId, runDay]);
   useEffect(() => { persistResume(); }, [session, persistResume]);
   useEffect(() => () => persistResume(), [persistResume]);
@@ -247,13 +249,14 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       outcome = recordClassicSolve(level, info, evaluateAchievements);
       campaignWorldUnlocked = newlyUnlockedCampaignWorld(before, getState().levels)?.name ?? null;
       campaignFinished = outcome.firstSolve && campaignComplete(getState().levels);
-      sendLeaderboardSubmission(() => submitGlobalRun(runId));
+      sendLeaderboardSubmission(() => submitCampaignRun(runId));
     }
     else if (source.kind === 'daily') {
       const day = runDay ?? dateKey();
       outcome = recordDailySolve(level, day, info, evaluateAchievements);
       streak = getState().stats.streak;
-      sendLeaderboardSubmission(() => submitDailyRun(day, runId, { stars: info.stars, moves: info.moves, time: info.time }));
+      const bestDaily = getState().daily[day] ?? info;
+      sendLeaderboardSubmission(() => submitDailyRun(day, runId, { stars: bestDaily.stars, moves: bestDaily.moves, time: bestDaily.time }));
     }
     else ach = recordOtherSolve(level, info, evaluateAchievements);
     if (outcome) ach = outcome.newAchievements;
@@ -390,7 +393,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     // touching the own line cuts it back to that cell
     const k = s.history.findIndex((h, idx) => idx < s.history.length - 1 && h.head === i);
     if (k >= 0) {
-      sessRef.current = { level: s.level, history: s.history.slice(0, k + 1) };
+      sessRef.current = { level: s.level, history: s.history.slice(0, k + 1), undosRemaining: s.undosRemaining };
       dirty.current = true;
       flush();
       return;
@@ -437,7 +440,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
 
   const undo = useCallback(() => {
     const s = sessRef.current;
-    if (s.history.length <= 1) return;
+    if (s.history.length <= 1 || s.undosRemaining <= 0) return;
     apply(sessionUndo(s)); clearHints(); setFailView(false); haptic('light'); sfx('undo');
   }, [apply]);
 

@@ -9,7 +9,7 @@ service cloud.firestore {
         || boardId.matches('^([0-9]{2}([02468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29$');
     }
     function validBoard(boardId) {
-      return boardId == 'global' || validDateBoardId(boardId);
+      return boardId == 'global' || boardId == 'campaign' || validDateBoardId(boardId);
     }
     function googleUser() {
       return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com';
@@ -66,7 +66,7 @@ service cloud.firestore {
     // Scores expose only a random player key and puzzle results; no UID, email, or Google profile fields.
     match /leaderboards/{boardId}/entries/{entryId} {
       allow read: if googleUser() && validBoard(boardId);
-      allow create, update: if boardId == 'global'
+      allow create, update: if (boardId == 'global' || boardId == 'campaign')
         && request.resource.data.keys().hasOnly(['key', 'score', 'solved', 'lastRunId', 'updatedAt'])
         && request.resource.data.key == entryId
         && ownsKey(entryId)

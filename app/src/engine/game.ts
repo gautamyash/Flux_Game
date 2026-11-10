@@ -179,10 +179,14 @@ export function applyMove(level: Level, st: GameState, to: number, checkTrapped 
 export interface Session {
   level: Level;
   history: GameState[];
+  /** Remaining undo actions for this puzzle run. */
+  undosRemaining: number;
 }
 
-export function createSession(level: Level): Session {
-  return { level, history: [createState(level)] };
+export const MAX_UNDOS_PER_RUN = 2;
+
+export function createSession(level: Level, undosRemaining = MAX_UNDOS_PER_RUN): Session {
+  return { level, history: [createState(level)], undosRemaining: Math.max(0, Math.min(MAX_UNDOS_PER_RUN, undosRemaining)) };
 }
 
 export function current(s: Session): GameState {
@@ -192,12 +196,12 @@ export function current(s: Session): GameState {
 export function sessionMove(s: Session, to: number): { session: Session; result: MoveResult } {
   const result = applyMove(s.level, current(s), to);
   if (!result.ok) return { session: s, result };
-  return { session: { level: s.level, history: [...s.history, result.state] }, result };
+  return { session: { ...s, history: [...s.history, result.state] }, result };
 }
 
 export function sessionUndo(s: Session): Session {
-  if (s.history.length <= 1) return s;
-  return { level: s.level, history: s.history.slice(0, -1) };
+  if (s.history.length <= 1 || s.undosRemaining <= 0) return s;
+  return { ...s, history: s.history.slice(0, -1), undosRemaining: s.undosRemaining - 1 };
 }
 
 /** head cell of the previous snapshot: dragging onto it retracts one step */

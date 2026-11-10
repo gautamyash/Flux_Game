@@ -47,6 +47,8 @@ export interface ResumeSnap {
   /** daily puzzles only resume on the same day */
   day: string;
   entered: number[];
+  /** Remaining undo actions, persisted with an unfinished run. */
+  undoRemaining?: number;
   seconds: number;
   hints: number;
   savedAt: number;
@@ -319,7 +321,8 @@ export function migrate(raw: unknown): AppState {
     resume = {
       runId: typeof rs.runId === 'string' ? rs.runId : '',
       source: rs.source as unknown as GameSource, levelId: rs.levelId, day: typeof rs.day === 'string' ? rs.day : '',
-      entered: rs.entered as number[], seconds: Math.max(0, num(rs.seconds, 0)), hints: Math.max(0, num(rs.hints, 0)), savedAt: num(rs.savedAt, 0),
+      entered: rs.entered as number[], undoRemaining: Math.max(0, Math.min(2, Math.round(num(rs.undoRemaining, 2)))),
+      seconds: Math.max(0, num(rs.seconds, 0)), hints: Math.max(0, num(rs.hints, 0)), savedAt: num(rs.savedAt, 0),
     };
   }
   const now = Date.now();
@@ -727,17 +730,19 @@ export function recordDailySolve(level: Level, key: string, info: SolveInfo, eva
     stats.lastDaily = key;
     stats.longestStreak = Math.max(stats.longestStreak, stats.streak);
   }
-  const daily = {
-    ...state.daily,
-    [key]: prev ?? { stars: info.stars, moves: info.moves, time: info.time, bonus: info.bonus },
-  };
+  const isBetter = !prev || info.stars > prev.stars
+    || (info.stars === prev.stars && info.moves < prev.moves)
+    || (info.stars === prev.stars && info.moves === prev.moves && info.time < prev.time);
+  const daily = isBetter
+    ? { ...state.daily, [key]: { stars: info.stars, moves: info.moves, time: info.time, bonus: info.bonus } }
+    : state.daily;
   const draft: AppState = { ...state, daily, stats };
   const earned = evalAch(draft).filter((a) => !state.achievements[a]);
   const achievements = { ...state.achievements };
   const now = Date.now();
   earned.forEach((a) => (achievements[a] = now));
   set({ daily, stats, achievements });
-  return { newBest: !prev, firstSolve: !prev, newAchievements: earned, chapterCompleted: null };
+  return { newBest: isBetter, firstSolve: !prev, newAchievements: earned, chapterCompleted: null };
 }
 
 export function recordOtherSolve(level: Level, info: SolveInfo, evalAch: (s: AppState) => string[]): string[] {

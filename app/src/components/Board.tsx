@@ -263,23 +263,46 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
 
   const teleEntrance = state.path.length > 1 ? state.path[state.path.length - 2] : -1;
   const justTeleported = teleEntrance >= 0 && level.cells[teleEntrance].kind === 'tele' && level.partner[teleEntrance] === state.head;
-  const previewVisible = (x: number, y: number) => {
+  const teleCenters = useMemo(
+    () => level.cells.reduce<{ cell: number; x: number; y: number }[]>((centers, c, i) => {
+      if (c.kind === 'tele') centers.push({ cell: i, ...cellCenter(geom, i) });
+      return centers;
+    }, []),
+    [level, geom],
+  );
+  const previewInBounds = (x: number, y: number) => {
     'worklet';
+    return x >= geom.pad && y >= geom.pad && x < geom.pad + geom.n * geom.cell && y < geom.pad + geom.n * geom.cell;
+  };
+  const previewLineVisible = (x: number, y: number) => {
+    'worklet';
+    if (!previewInBounds(x, y)) return false;
     const col = Math.floor((x - geom.pad) / geom.cell);
     const row = Math.floor((y - geom.pad) / geom.cell);
-    if (col < 0 || row < 0 || col >= geom.n || row >= geom.n) return false;
     const target = row * geom.n + col;
+    // The portal bridge already represents this jump; do not draw a straight line back to its entrance.
     if (justTeleported && target === teleEntrance) return false;
-    const headRow = Math.floor(state.head / geom.n);
-    const headCol = state.head % geom.n;
-    return Math.abs(row - headRow) + Math.abs(col - headCol) <= 1;
+
+    // Hide the connector if its straight segment cuts through another portal.
+    const dx = x - head.x;
+    const dy = y - head.y;
+    const lenSq = dx * dx + dy * dy;
+    for (let i = 0; i < teleCenters.length; i++) {
+      const portal = teleCenters[i];
+      if (portal.cell === state.head || portal.cell === target) continue;
+      const projection = lenSq > 0 ? Math.max(0, Math.min(1, ((portal.x - head.x) * dx + (portal.y - head.y) * dy) / lenSq)) : 0;
+      const nearX = head.x + projection * dx;
+      const nearY = head.y + projection * dy;
+      if (Math.hypot(portal.x - nearX, portal.y - nearY) <= geom.cell * 0.85) return false;
+    }
+    return true;
   };
   const previewLineProps = useAnimatedProps(() => {
-    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewVisible(fingerX.value, fingerY.value);
-    return { x2: fingerX.value, y2: fingerY.value, opacity: visible ? 0.78 : 0 };
+    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewLineVisible(fingerX.value, fingerY.value);
+    return { x2: fingerX.value, y2: fingerY.value, opacity: visible ? 0.72 : 0 };
   });
   const previewDotProps = useAnimatedProps(() => {
-    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewVisible(fingerX.value, fingerY.value);
+    const visible = previewActive.value && drawingEnabled && state.status === 'playing' && previewInBounds(fingerX.value, fingerY.value);
     return { cx: fingerX.value, cy: fingerY.value, opacity: visible ? 1 : 0 };
   });
 
@@ -347,17 +370,6 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
           animatedProps={sweepProps}
         />
       ) : null}
-      {drawingEnabled && state.status === 'playing' ? (
-        <AnimatedLine
-          x1={head.x}
-          y1={head.y}
-          stroke={t.pathB}
-          strokeWidth={pathW * 0.62}
-          strokeDasharray={`${f(geom.cell * 0.12)} ${f(geom.cell * 0.14)}`}
-          strokeLinecap="round"
-          animatedProps={previewLineProps}
-        />
-      ) : null}
       {visuals.map((v, i) => {
         if (v.kind === 'empty' && !v.locked && !v.err && !v.hint) return null;
         if (v.kind === 'dead' && !v.err) return null;
@@ -365,6 +377,17 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
         const c = i % level.size;
         return <CellItem key={`g${i}`} layer="glyph" v={v} t={t} pulse={pulse} x={geom.pad + c * geom.cell} y={geom.pad + r * geom.cell} scale={scale} />;
       })}
+      {drawingEnabled && state.status === 'playing' ? (
+        <AnimatedLine
+          x1={head.x}
+          y1={head.y}
+          stroke={t.accent}
+          strokeWidth={pathW * 0.82}
+          strokeDasharray={`${f(geom.cell * 0.32)} ${f(geom.cell * 0.1)}`}
+          strokeLinecap="round"
+          animatedProps={previewLineProps}
+        />
+      ) : null}
       {!preview && state.status === 'playing' ? (
         <G>
           <Circle cx={head.x} cy={head.y} r={geom.cell * 0.38} fill="none" stroke={t.raised} strokeWidth={geom.cell * 0.11} />
@@ -373,10 +396,10 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
       ) : null}
       {drawingEnabled && state.status === 'playing' ? (
         <AnimatedCircle
-          r={geom.cell * 0.055}
-          fill={t.pathB}
+          r={geom.cell * 0.1}
+          fill={t.accent}
           stroke="#FFFFFF"
-          strokeWidth={geom.cell * 0.025}
+          strokeWidth={geom.cell * 0.035}
           animatedProps={previewDotProps}
         />
       ) : null}

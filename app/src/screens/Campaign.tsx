@@ -142,6 +142,9 @@ export function CampaignScreen() {
       <View accessibilityRole="text" accessibilityLabel={`Campaign progress ${completeCount} of 250 levels`} style={{ alignSelf: 'center', paddingVertical: 5 }}>
         <T v="cap" color={t.text2}>50 worlds · 250 levels · progress saves automatically</T>
       </View>
+      <View style={{ paddingHorizontal: 14, paddingBottom: 8 }}>
+        <Button label="Campaign leaderboard" icon="trophy" variant="secondary" height={42} onPress={() => nav.push({ name: 'leaderboard', kind: 'campaign' })} />
+      </View>
     </Screen>
   );
 }

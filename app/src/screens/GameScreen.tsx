@@ -130,7 +130,7 @@ export function GameScreen({ source, runId, dailyDay }: { source: GameSource; ru
   const practice = source.kind === 'practice';
   const left = settings.leftHanded;
   const actions = [
-    <ActionButton key="u" icon="undo" label="Undo" onPress={g.undo} disabled={g.session.history.length <= 1 || st.status !== 'playing'} />,
+    <ActionButton key="u" icon="undo" label="Undo" onPress={g.undo} badge={String(g.session.undosRemaining)} disabled={g.session.history.length <= 1 || g.session.undosRemaining <= 0 || st.status !== 'playing'} />,
     <ActionButton key="h" icon="bulb" label="Hint" accessibilityLabel={`Hint, ${g.hintsRemaining} remaining`} onPress={g.hint} badge={String(g.hintsRemaining)} disabled={st.status !== 'playing'} />,
     <ActionButton key="r" icon="restart" label="Restart" onPress={() => g.setConfirmRestart(true)} />,
   ];
@@ -193,7 +193,7 @@ export function GameScreen({ source, runId, dailyDay }: { source: GameSource; ru
           onSettings={() => { g.setPaused(false); nav.push({ name: 'settings' }); }} onQuit={quit} />
       ) : null}
       {g.failView && st.status === 'failed' ? (
-        <FailedView level={level} state={st} canUndo={g.session.history.length > 1} onUndo={g.undo} onRetry={g.doRestart} />
+        <FailedView level={level} state={st} canUndo={g.session.history.length > 1 && g.session.undosRemaining > 0} onUndo={g.undo} onRetry={g.doRestart} />
       ) : null}
       {g.result ? (
         <ResultView level={level} state={st} data={g.result} kind={source.kind} leaderboardSubmission={g.leaderboardSubmission} onRetryLeaderboard={g.retryLeaderboardSubmission} onNext={g.goNext} onRetry={again} onHome={() => nav.reset({ name: 'home' })} />
