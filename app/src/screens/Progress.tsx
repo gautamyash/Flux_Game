@@ -78,11 +78,14 @@ export function LevelsScreen({ chapter }: { chapter: number }) {
           const offset = [0, 60, 90, 60, 0, -60, -90, -60][i % 8];
           return (
             <View key={d.id} style={{ alignItems: 'center', transform: [{ translateX: offset }] }}>
-              <Pressable disabled={!unlocked} accessibilityRole="button" accessibilityLabel={`Level ${d.id}${rec ? `, ${rec.stars} stars` : unlocked ? '' : ', locked'}`}
+              <Pressable disabled={!unlocked} accessibilityRole="button" accessibilityLabel={`${d.boss ? `Boss level, chapter ${chapter}` : d.mystery ? 'Mystery level' : `Level ${d.id}`}${d.boss && rec ? ', boss defeated' : rec ? `, ${rec.stars} stars` : unlocked ? '' : ', locked'}`}
                 onPress={() => nav.startGame({ kind: 'classic', levelId: d.id })}
-                style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: rec ? t.accent : unlocked ? t.raised : t.plate, borderWidth: 2, borderColor: unlocked ? t.accent : t.grid }}>
-                {unlocked ? <T v="h3" color={rec ? t.onAccent : t.text}>{i + 1}</T> : <Icon name="lock" size={22} color={t.disabled} />}
+                style={{ width: 88, minHeight: 96, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: rec ? t.accent : unlocked ? t.raised : t.plate, borderWidth: d.boss ? 3 : 2, borderColor: unlocked ? (d.boss ? t.bonus : t.accent) : t.grid }}>
+                  {unlocked ? <T v="h3" color={rec ? t.onAccent : t.text}>{d.boss ? '★' : i + 1}</T> : <Icon name="lock" size={22} color={t.disabled} />}
+                </View>
               </Pressable>
+              {d.boss || d.mystery ? <T v="cap" color={d.boss ? t.bonus : t.accent}>{d.boss ? rec ? 'DEFEATED' : 'BOSS' : 'MYSTERY'}</T> : null}
               {rec ? (
                 <View style={{ flexDirection: 'row', gap: 2, marginTop: 4 }}>
                   {[1, 2, 3].map((s) => <StarShape key={s} size={14} filled={s <= rec.stars} color={t.bonus} empty={t.grid} />)}

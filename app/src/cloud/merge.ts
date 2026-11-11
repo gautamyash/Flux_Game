@@ -1,5 +1,6 @@
 import type { AppState, DailyRecord, LevelRecord, Stats } from '../store/store';
-import { ALL_LEVEL_DEFS } from '../lib/levels';
+import { ALL_LEVEL_DEFS, CAMPAIGN_PROGRESSION_DEFS } from '../lib/levels';
+import { rewardForChest } from '../lib/rewards';
 
 /** Everything that follows a Google account. Device-only things (resume snapshot, login mode, clock) stay out. */
 export interface SyncData {
@@ -7,6 +8,11 @@ export interface SyncData {
   onboarded: boolean;
   settings: AppState['settings'];
   levels: AppState['levels'];
+  campaignLevels?: AppState['campaignLevels'];
+  /** Permanent one-time reward eligibility records; older cloud documents omit this field. */
+  completionRewards?: AppState['completionRewards'];
+  unlockedBoardSkins?: AppState['unlockedBoardSkins'];
+  unlockedProfileBadges?: AppState['unlockedProfileBadges'];
   daily: AppState['daily'];
   stats: AppState['stats'];
   achievements: AppState['achievements'];
@@ -24,6 +30,10 @@ export function toSyncData(s: AppState): SyncData {
     onboarded: s.onboarded,
     settings: s.settings,
     levels: s.levels,
+    campaignLevels: s.campaignLevels,
+    completionRewards: s.completionRewards,
+    unlockedBoardSkins: s.unlockedBoardSkins,
+    unlockedProfileBadges: s.unlockedProfileBadges,
     daily: s.daily,
     stats: s.stats,
     achievements: s.achievements,
@@ -37,6 +47,7 @@ export function toSyncData(s: AppState): SyncData {
 }
 
 const levelOrder = (id: string | null) => (id ? ALL_LEVEL_DEFS.findIndex((d) => d.id === id) : -1);
+const campaignIds = new Set(CAMPAIGN_PROGRESSION_DEFS.map((d) => d.id));
 
 const minPos = (a: number, b: number) => (a > 0 && b > 0 ? Math.min(a, b) : a || b);
 
@@ -73,7 +84,36 @@ function mergeStats(a: Stats, b: Stats): Stats {
   };
 }
 
-const progressCount = (d: Pick<SyncData, 'levels' | 'daily'>) => Object.keys(d.levels).length + Object.keys(d.daily).length;
+const progressCount = (d: Pick<SyncData, 'levels' | 'daily'> & { campaignLevels?: AppState['campaignLevels'] }) => Object.keys(d.levels).length + Object.keys(d.campaignLevels ?? {}).length + Object.keys(d.daily).length;
+
+function normalizeReward(record: AppState['completionRewards'][string]): AppState['completionRewards'][string] {
+  if (record.rewardId && record.rarity && record.status && record.expiresAt) return record;
+  const assigned = rewardForChest(record.chestId);
+  return { ...record, rewardId: assigned.id, rarity: assigned.rarity, status: 'pending', expiresAt: record.generatedAt + 24 * 60 * 60 * 1000 };
+}
+
+function mergeCompletionRewards(local: AppState['completionRewards'] = {}, remote: AppState['completionRewards'] = {}): AppState['completionRewards'] {
+  const rewards = { ...local };
+  for (const [key, record] of Object.entries(remote)) {
+    const current = rewards[key];
+    if (!current) { rewards[key] = normalizeReward(record); continue; }
+    const a = normalizeReward(current);
+    const b = normalizeReward(record);
+    const rank: Record<string, number> = { pending: 0, expired: 1, redeemed: 2, active: 3, completed: 4 };
+    const winner = (rank[b.status] ?? 0) > (rank[a.status] ?? 0) ? b : a;
+    rewards[key] = {
+      ...winner,
+      generatedAt: Math.min(a.generatedAt, b.generatedAt),
+      expiresAt: Math.min(a.expiresAt, b.expiresAt),
+      ...(a.redeemedAt !== undefined || b.redeemedAt !== undefined ? { redeemedAt: Math.min(a.redeemedAt ?? Number.MAX_SAFE_INTEGER, b.redeemedAt ?? Number.MAX_SAFE_INTEGER) } : {}),
+      ...(a.effectEndsAt !== undefined && b.effectEndsAt !== undefined && a.status === 'active' && b.status === 'active'
+        ? { effectEndsAt: Math.min(a.effectEndsAt, b.effectEndsAt) } : {}),
+    };
+  }
+  return rewards;
+}
+
+function mergeUnique<T extends string>(a: T[] = [], b: T[] = []): T[] { return [...new Set([...a, ...b])]; }
 
 /**
  * Combine two copies of one player's progress (this phone + the cloud). Never loses progress:
@@ -82,10 +122,36 @@ const progressCount = (d: Pick<SyncData, 'levels' | 'daily'>) => Object.keys(d.l
  * "Reset progress" on either side wins outright instead of being merged back in.
  */
 export function mergeSync(local: SyncData, remote: SyncData, sameAccount: boolean): SyncData {
-  if (sameAccount && remote.epoch !== local.epoch) return remote.epoch > local.epoch ? remote : local;
+  const normalizeCampaign = (data: SyncData): SyncData => {
+    const levels: Record<string, LevelRecord> = {};
+    const campaignLevels: Record<string, LevelRecord> = { ...(data.campaignLevels ?? {}) };
+    for (const [id, record] of Object.entries(data.levels)) {
+      const target = campaignIds.has(id) ? campaignLevels : levels;
+      target[id] = target[id] ? mergeLevel(target[id], record) : record;
+    }
+    return { ...data, levels, campaignLevels };
+  };
+  local = normalizeCampaign(local);
+  remote = normalizeCampaign(remote);
+  if (sameAccount && remote.epoch !== local.epoch) {
+    const winner = remote.epoch > local.epoch ? remote : local;
+    const other = winner === remote ? local : remote;
+    const completionRewards = mergeCompletionRewards(winner.completionRewards, other.completionRewards);
+    return { ...winner, completionRewards,
+      unlockedBoardSkins: mergeUnique(winner.unlockedBoardSkins, other.unlockedBoardSkins),
+      unlockedProfileBadges: mergeUnique(winner.unlockedProfileBadges, other.unlockedProfileBadges) };
+  }
 
   const levels: Record<string, LevelRecord> = { ...local.levels };
-  for (const [id, r] of Object.entries(remote.levels)) levels[id] = levels[id] ? mergeLevel(levels[id], r) : r;
+  const campaignLevels: Record<string, LevelRecord> = { ...(local.campaignLevels ?? {}) };
+  for (const source of [local.levels, remote.levels]) {
+    for (const [id, record] of Object.entries(source)) {
+      levels[id] = levels[id] ? mergeLevel(levels[id], record) : record;
+    }
+  }
+  for (const source of [local.campaignLevels ?? {}, remote.campaignLevels ?? {}]) {
+    for (const [id, record] of Object.entries(source)) campaignLevels[id] = campaignLevels[id] ? mergeLevel(campaignLevels[id], record) : record;
+  }
 
   const daily: Record<string, DailyRecord> = { ...local.daily };
   for (const [k, r] of Object.entries(remote.daily)) if (!daily[k] || r.stars > daily[k].stars) daily[k] = r;
@@ -100,6 +166,10 @@ export function mergeSync(local: SyncData, remote: SyncData, sameAccount: boolea
     // settings are per-phone habits: keep this phone's, unless it is a fresh phone with nothing yet
     settings: localFresh ? remote.settings : local.settings,
     levels,
+    campaignLevels,
+    completionRewards: mergeCompletionRewards(local.completionRewards, remote.completionRewards),
+    unlockedBoardSkins: mergeUnique(local.unlockedBoardSkins, remote.unlockedBoardSkins),
+    unlockedProfileBadges: mergeUnique(local.unlockedProfileBadges, remote.unlockedProfileBadges),
     daily,
     stats: mergeStats(local.stats, remote.stats),
     achievements,

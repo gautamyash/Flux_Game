@@ -9,8 +9,8 @@ import { useFonts, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sor
 import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
 import { NavProvider, Route, useNav } from './src/nav/Nav';
 import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
-import { flushStore, getState, loadStore, refreshEnergy, refreshHints, saveResume, touchActive, useStore } from './src/store/store';
-import { Notifications, refreshNotifications, routeFromResponse } from './src/lib/notifications';
+import { flushStore, getState, loadStore, refreshEnergy, refreshHints, registerNotificationRefreshCallback, saveResume, touchActive, useStore } from './src/store/store';
+import { Notifications, refreshNotifications, routeFromResponse, scheduleNotificationRefresh } from './src/lib/notifications';
 import { setMusic } from './src/lib/sound';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { installGlobalHandlers } from './src/lib/crash';
@@ -24,29 +24,29 @@ import { ChapterIntroScreen, ChaptersScreen, LevelsScreen } from './src/screens/
 import { DailyScreen, ModesScreen } from './src/screens/Modes';
 import { AchievementsScreen, CellsScreen, HowToScreen, StatsScreen } from './src/screens/Info';
 import { SettingsScreen, ThemesScreen } from './src/screens/Settings';
+import { RewardsScreen } from './src/screens/Rewards';
+import { ReferralScreen } from './src/screens/Referral';
 import { LeaderboardScreen } from './src/screens/Leaderboard';
 import { CampaignScreen } from './src/screens/Campaign';
 import { UpdateProvider, useUpdateManager } from './src/lib/UpdateProvider';
 
 let lastHandled = '';
-/** opens the right screen when a reminder is tapped (also when it cold-started the app) */
+/** Opens the right screen when a reminder is tapped while the app is running or backgrounded */
 function NotifRouter() {
   const nav = useNav();
   useEffect(() => {
-    const open = (resp: Notifications.NotificationResponse, delay: number) => {
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
       const id = resp.notification.request.identifier;
       if (id === lastHandled) return;
       lastHandled = id;
       const route = routeFromResponse(resp);
-      setTimeout(() => {
-        const rs = getState().resume;
-        if (route === 'daily') nav.push({ name: 'daily' });
-        else if (route === 'resume' && rs) nav.startGame(rs.source, rs.runId || undefined, rs.day);
-      }, delay);
-    };
-    const last = Notifications.getLastNotificationResponse();
-    if (last) open(last, 1600);
-    const sub = Notifications.addNotificationResponseReceivedListener((r) => open(r, 0));
+      const rs = getState().resume;
+      if (route === 'daily') nav.push({ name: 'daily' });
+      else if (route === 'rewards') nav.push({ name: 'rewards' });
+      else if (route === 'campaign') nav.push({ name: 'campaign' });
+      else if (route === 'resume' && rs) nav.startGame(rs.source, rs.runId || undefined, rs.day);
+      else nav.push({ name: 'home' });
+    });
     return () => sub.remove();
   }, [nav]);
   return null;
@@ -72,6 +72,8 @@ function renderRoute(r: Route): React.ReactNode {
     case 'achievements': return <AchievementsScreen />;
     case 'settings': return <SettingsScreen />;
     case 'themes': return <ThemesScreen />;
+    case 'rewards': return <RewardsScreen />;
+    case 'referral': return <ReferralScreen />;
     case 'privacy': return <PrivacyScreen />;
   }
 }
@@ -106,6 +108,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     installGlobalHandlers();
+    registerNotificationRefreshCallback(() => scheduleNotificationRefresh(400));
     void loadStore().finally(() => {
       touchActive();
       void refreshNotifications();
@@ -113,7 +116,11 @@ export default function App() {
       startSync();
     });
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') { refreshEnergy(); refreshHints(); }
+      if (next === 'active') {
+        refreshEnergy();
+        refreshHints();
+        void refreshNotifications();
+      }
       if (next === 'background' || next === 'inactive') {
         touchActive();
         void refreshNotifications();

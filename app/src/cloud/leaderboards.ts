@@ -1,6 +1,6 @@
 import { cloudConfigured } from '../config';
 import { getState, isValidDateKey, solvedCount, totalStars } from '../store/store';
-import { CAMPAIGN_LEVEL_DEFS } from '../lib/levels';
+import { CAMPAIGN_PROGRESSION_DEFS } from '../lib/levels';
 import { ensureGoogleFirebaseUser, leaderboardFirestore } from './auth';
 
 /* Firebase is loaded lazily so guest play and unit tests work without configured cloud services. */
@@ -46,7 +46,7 @@ export function isBetterGlobalResult(a: Pick<GlobalEntry, 'score' | 'solved'>, b
 }
 
 export function campaignResult(levels: Record<string, { stars: number }>): Pick<GlobalEntry, 'score' | 'solved'> {
-  const solved = CAMPAIGN_LEVEL_DEFS.filter(({ id }) => !!levels[id]);
+  const solved = CAMPAIGN_PROGRESSION_DEFS.filter(({ id }) => !!levels[id]);
   return { score: solved.reduce((sum, { id }) => sum + levels[id].stars, 0), solved: solved.length };
 }
 
@@ -126,13 +126,16 @@ async function submit(kind: LeaderboardKind, boardId: string, runId: string, res
 
 /** Submit the existing all-level star total after a successfully completed Classic or Master puzzle. */
 export function submitGlobalRun(runId: string): Promise<SubmissionResult> {
-  const levels = getState().levels;
+  const state = getState();
+  // Preserve the existing all-progression Global score after Campaign records
+  // move into their independent persistence map.
+  const levels = { ...state.levels, ...state.campaignLevels };
   return trackSubmission(submit('global', 'global', runId, { score: totalStars(levels), solved: solvedCount(levels) }));
 }
 
 /** Submit campaign-only star progress to its independent leaderboard. */
 export function submitCampaignRun(runId: string): Promise<SubmissionResult> {
-  return trackSubmission(submit('campaign', 'campaign', runId, campaignResult(getState().levels)));
+  return trackSubmission(submit('campaign', 'campaign', runId, campaignResult(getState().campaignLevels)));
 }
 
 /** Submit the existing Daily result after a successfully completed Daily puzzle. */

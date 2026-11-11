@@ -98,10 +98,10 @@ describe('load / save', () => {
 describe('energy', () => {
   const start = 1_800_000_000_000;
 
-  test('new players begin with thirty energy and existing balances are preserved', () => {
-    expect(ENERGY_MAX).toBe(30);
-    expect(ENERGY_REFILL_MS).toBe(2_700_000);
-    expect(migrate({}).energy).toBe(30);
+  test('new players begin with twenty energy and existing balances are preserved', () => {
+    expect(ENERGY_MAX).toBe(20);
+    expect(ENERGY_REFILL_MS).toBe(1_800_000);
+    expect(migrate({}).energy).toBe(20);
     const oldSave = migrate({ energy: 4, energyRefillStartedAt: start });
     expect(oldSave.energy).toBe(4);
     expect(oldSave.energyRefillStartedAt).toBe(start);

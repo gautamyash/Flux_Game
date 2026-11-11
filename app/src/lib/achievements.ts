@@ -13,8 +13,9 @@ export interface AchievementDef {
   progress: (s: AppState) => number;
 }
 
-const stars = (s: AppState) => totalStars(s.levels);
-const solved = (s: AppState) => Object.keys(s.levels).length;
+const allProgressionLevels = (s: AppState) => ({ ...s.levels, ...s.campaignLevels });
+const stars = (s: AppState) => totalStars(allProgressionLevels(s));
+const solved = (s: AppState) => Object.keys(allProgressionLevels(s)).length;
 const mech = (k: string) => (s: AppState) => s.stats.mech[k] || 0;
 const chapterDone = (n: number) => (s: AppState) => (chaptersDone(s.levels).includes(n) ? 1 : 0);
 

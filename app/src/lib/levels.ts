@@ -1,5 +1,5 @@
 import raw from '../levels/levels.json';
-import { Level, LevelDef, parseLevel } from '../engine';
+import { Dir, Level, LevelDef, parseLevel, hamiltonianPath, mulberry32 } from '../engine';
 import { SkinId } from '../theme/tokens';
 
 export const LEVEL_DEFS = raw as LevelDef[];
@@ -90,50 +90,216 @@ export const CAMPAIGN_WORLDS: CampaignWorld[] = WORLD_THEMES.map((theme, index) 
   };
 });
 
-function snakePath(size: number): number[] {
-  const path: number[] = [];
-  for (let row = 0; row < size; row++) {
-    for (let step = 0; step < size; step++) {
-      const col = row % 2 === 0 ? step : size - 1 - step;
-      path.push(row * size + col);
-    }
-  }
-  return path;
+function chebDist(size: number, a: number, b: number): number {
+  return Math.max(Math.abs(Math.floor(a / size) - Math.floor(b / size)), Math.abs((a % size) - (b % size)));
 }
 
-function transformCell(cell: number, size: number, variant: number): number {
-  let x = cell % size;
-  let y = Math.floor(cell / size);
-  if (variant >= 4) x = size - 1 - x;
-  for (let turn = 0; turn < variant % 4; turn++) [x, y] = [size - 1 - y, x];
-  return y * size + x;
+function dirOfCells(size: number, a: number, b: number): Dir {
+  const d = b - a;
+  if (d === -size) return 'u';
+  if (d === size) return 'd';
+  return d === 1 ? 'r' : 'l';
+}
+
+function dirTokenFrom(dir: Dir): string {
+  return { u: '^', r: '>', d: 'v', l: '<' }[dir];
 }
 
 function makeCampaignLevel(number: number): LevelDef {
   const worldId = Math.ceil(number / 5);
+  const levelInWorld = ((number - 1) % 5) + 1;
   const world = CAMPAIGN_WORLDS[worldId - 1];
   const size = 4 + Math.floor((worldId - 1) / 10);
-  const serial = ((worldId - 1) % 10) * 5 + ((number - 1) % 5);
-  const variant = serial % 8;
-  const mask = serial + 1;
-  const path = snakePath(size).map((cell) => transformCell(cell, size, variant));
-  // Six stable interior cells encode a unique checkpoint layout for each level in this grid-size band.
-  const signatures = [1, size, size + 1, size * 3 - 1, size * (size - 1) + 1, size * size - 2];
-  const pathOrder = new Map(path.map((cell, i) => [cell, i]));
-  const checkpointCells = [path[0], ...signatures.filter((_, bit) => (mask & (1 << bit)) !== 0), path[path.length - 1]];
-  checkpointCells.sort((a, b) => (pathOrder.get(a) ?? 0) - (pathOrder.get(b) ?? 0));
-  const cells = new Array<string>(size * size).fill('.');
-  checkpointCells.forEach((cell, i) => { cells[cell] = String(i + 1); });
-  const rows = Array.from({ length: size }, (_, row) => cells.slice(row * size, (row + 1) * size).join(' '));
+  const N = size * size;
+
+  // High-dispersion deterministic seed per level
+  const seed = (number * 2654435761) ^ (worldId * 1013904223) ^ 0x85ebca6b;
+  const rng = mulberry32(seed);
+
+  // Generate an organic, non-repeating Hamiltonian path covering all cells
+  const path = hamiltonianPath(size, rng);
+
+  // Checkpoint count scales with grid size and level in world
+  const kCount = Math.min(
+    Math.floor(N / 3),
+    4 + Math.floor((size - 4) * 1.5) + (levelInWorld % 2)
+  );
+
+  // Distribute checkpoints evenly along path with slight jitter
+  const checkpointIndices = [0];
+  for (let k = 1; k < kCount - 1; k++) {
+    const ideal = Math.round(((N - 1) * k) / (kCount - 1));
+    const jitter = Math.floor(rng() * 3) - 1;
+    const candidate = Math.max(
+      checkpointIndices[k - 1] + 2,
+      Math.min(N - 2 - (kCount - 1 - k) * 2, ideal + jitter)
+    );
+    checkpointIndices.push(candidate);
+  }
+  checkpointIndices.push(N - 1);
+
+  const checkpointIndexSet = new Set(checkpointIndices);
+  const availableIndices = Array.from({ length: N }, (_, i) => i)
+    .filter((i) => !checkpointIndexSet.has(i));
+
+  const tokenAtPathIndex = new Map<number, string>();
+
+  // Determine mechanics profile based on world theme and progression tier
+  const tier = Math.ceil(worldId / 10); // 1 to 5
+  const cycle = ((worldId - 1) % 5) + 1; // 1 to 5 thematic flavour
+  const isMystery = levelInWorld === 5;
+
+  const canHaveDir = worldId >= 2;
+  const canHaveBurn = (worldId >= 3 && cycle % 2 === 1) || tier >= 3;
+  const canHaveFreeze = (worldId >= 4 && (cycle === 3 || cycle === 4)) || tier >= 4;
+  const canHaveSwitchGate = (worldId >= 5 && (cycle === 5 || cycle === 1 || cycle === 2)) || tier >= 3;
+  const canHaveCountdown = (worldId >= 7 && (cycle === 2 || cycle === 4 || isMystery)) || tier >= 4;
+
+  // 1. Switch & Gate pair (requires S at j, G at k where j < k, spacing >= 3)
+  if (canHaveSwitchGate && levelInWorld >= 2 && availableIndices.length >= 4) {
+    const validPairs: [number, number][] = [];
+    for (let a = 0; a < availableIndices.length; a++) {
+      for (let b = a + 1; b < availableIndices.length; b++) {
+        const j = availableIndices[a];
+        const k = availableIndices[b];
+        if (k - j >= 3 && k < N - 1) {
+          validPairs.push([j, k]);
+        }
+      }
+    }
+    if (validPairs.length > 0) {
+      const pair = validPairs[Math.floor(rng() * validPairs.length)];
+      tokenAtPathIndex.set(pair[0], 'S');
+      tokenAtPathIndex.set(pair[1], 'G');
+      const idxA = availableIndices.indexOf(pair[0]);
+      if (idxA >= 0) availableIndices.splice(idxA, 1);
+      const idxB = availableIndices.indexOf(pair[1]);
+      if (idxB >= 0) availableIndices.splice(idxB, 1);
+    }
+  }
+
+  // 2. Countdown tile (must be reachable in moves <= countVal, with countVal in 2..5)
+  if (canHaveCountdown && levelInWorld >= 2 && availableIndices.length > 0) {
+    const earlyCandidates = availableIndices.filter((idx) => idx >= 1 && idx <= 4);
+    if (earlyCandidates.length > 0) {
+      const idx = earlyCandidates[Math.floor(rng() * earlyCandidates.length)];
+      const countVal = Math.min(5, Math.max(2, idx + 1));
+      tokenAtPathIndex.set(idx, `c${countVal}`);
+      const pos = availableIndices.indexOf(idx);
+      if (pos >= 0) availableIndices.splice(pos, 1);
+    }
+  }
+
+  // 3. Freeze tile (verify that path moves at idx+2, idx+3, idx+4 are not adjacent to freeze center)
+  if (canHaveFreeze && levelInWorld >= 3 && availableIndices.length > 0) {
+    const freezeCandidates = availableIndices.filter((idx) => {
+      if (idx + 4 >= N) return false;
+      return (
+        chebDist(size, path[idx], path[idx + 2]) >= 2 &&
+        chebDist(size, path[idx], path[idx + 3]) >= 2 &&
+        chebDist(size, path[idx], path[idx + 4]) >= 2
+      );
+    });
+    if (freezeCandidates.length > 0) {
+      const idx = freezeCandidates[Math.floor(rng() * freezeCandidates.length)];
+      tokenAtPathIndex.set(idx, 'F');
+      const pos = availableIndices.indexOf(idx);
+      if (pos >= 0) availableIndices.splice(pos, 1);
+    }
+  }
+
+  // 4. Burn tiles (cost 2 moves each)
+  if (canHaveBurn && levelInWorld >= 2 && availableIndices.length > 0) {
+    const maxBurn = size >= 7 ? 2 : 1;
+    const burnCount = Math.min(maxBurn, availableIndices.length);
+    for (let b = 0; b < burnCount; b++) {
+      if (!availableIndices.length) break;
+      const pickIdx = Math.floor(rng() * availableIndices.length);
+      const idx = availableIndices[pickIdx];
+      tokenAtPathIndex.set(idx, 'B');
+      availableIndices.splice(pickIdx, 1);
+    }
+  }
+
+  // 5. Direction arrows
+  if (canHaveDir && availableIndices.length > 0) {
+    const dirCount = Math.min(size >= 6 ? 3 : 2, availableIndices.length);
+    for (let d = 0; d < dirCount; d++) {
+      if (!availableIndices.length) break;
+      const pickIdx = Math.floor(rng() * availableIndices.length);
+      const idx = availableIndices[pickIdx];
+      if (idx < N - 1) {
+        const dir = dirOfCells(size, path[idx], path[idx + 1]);
+        tokenAtPathIndex.set(idx, dirTokenFrom(dir));
+      }
+      availableIndices.splice(pickIdx, 1);
+    }
+  }
+
+  // Build grid rows
+  const checkpointMap = new Map<number, number>();
+  checkpointIndices.forEach((cellIdx, i) => checkpointMap.set(path[cellIdx], i + 1));
+
+  const cells = new Array<string>(N).fill('.');
+  for (let cell = 0; cell < N; cell++) {
+    const nodeNum = checkpointMap.get(cell);
+    if (nodeNum !== undefined) {
+      cells[cell] = String(nodeNum);
+    } else {
+      const pathIdx = path.indexOf(cell);
+      const tok = tokenAtPathIndex.get(pathIdx);
+      cells[cell] = tok ?? '.';
+    }
+  }
+
+  const rows = Array.from({ length: size }, (_, row) =>
+    cells.slice(row * size, (row + 1) * size).join(' ')
+  );
+
+  // Compute solution and move limits
+  const solution = path.slice(1);
+  let solutionMoves = 0;
+  for (let i = 1; i < path.length; i++) {
+    const tok = tokenAtPathIndex.get(i);
+    solutionMoves += tok === 'B' ? 2 : 1;
+  }
+  const slack = size >= 7 ? 4 : size >= 5 ? 3 : 2;
+  const maxMoves = solutionMoves + slack;
+
+  // Mystery configuration for Level 5
+  let mysteryConfig = undefined;
+  if (isMystery) {
+    const hiddenStepIndices = [
+      Math.round(N * 0.25),
+      Math.round(N * 0.5),
+      Math.round(N * 0.75),
+      ...(size >= 6 ? [Math.round(N * 0.85)] : []),
+    ].filter((stepIdx) => stepIdx >= 1 && stepIdx < N - 1);
+    const hiddenCells = hiddenStepIndices.map((idx) => path[idx]);
+    mysteryConfig = {
+      hiddenCells,
+      initialHiddenCount: hiddenCells.length,
+      discoverOn: 'enter' as const,
+      difficulty: worldId > 35 ? ('expert' as const) : ('advanced' as const),
+      objective: 'Discover the hidden cells and reach the final node in order.',
+    };
+  }
+
   return {
-    id: campaignLevelId(number), chapter: 9, index: number, size, rows,
-    maxMoves: path.length + 4, optimal: path.length - 1, title: world.name,
-    solution: path.slice(1),
+    id: campaignLevelId(number),
+    chapter: 9,
+    index: number,
+    size,
+    rows,
+    maxMoves,
+    optimal: solutionMoves,
+    title: world.name,
+    solution,
+    mystery: mysteryConfig,
   };
 }
 
 export const CAMPAIGN_LEVEL_DEFS: LevelDef[] = Array.from({ length: 250 }, (_, i) => makeCampaignLevel(i + 1));
-export const ALL_LEVEL_DEFS = [...LEVEL_DEFS, ...CAMPAIGN_LEVEL_DEFS];
 
 export function campaignLevelNumber(id: string): number {
   const def = CAMPAIGN_LEVEL_DEFS.find((d) => d.id === id);
@@ -142,19 +308,31 @@ export function campaignLevelNumber(id: string): number {
 
 export function campaignWorldComplete(levels: Record<string, { stars: number }>, worldId: number): boolean {
   const world = CAMPAIGN_WORLDS.find((w) => w.id === worldId);
-  return !!world && world.levelIds.every((id) => !!levels[id]);
+  return !!world && world.levelIds.every((id) => !!levels[id]) && !!levels[campaignBossLevelId(worldId)];
 }
 
 export function campaignWorldUnlocked(levels: Record<string, { stars: number }>, worldId: number): boolean {
-  return worldId === 1 || (worldId > 1 && campaignWorldComplete(levels, worldId - 1));
+  return worldId === 1 || (worldId > 1 && !!levels[campaignBossLevelId(worldId - 1)]);
 }
 
 export function campaignLevelUnlocked(levels: Record<string, { stars: number }>, number: number): boolean {
-  return number === 1 || (number > 1 && number <= CAMPAIGN_LEVEL_DEFS.length && !!levels[campaignLevelId(number - 1)]);
+  if (number < 1 || number > CAMPAIGN_LEVEL_DEFS.length) return false;
+  const worldId = Math.ceil(number / 5);
+  return campaignWorldUnlocked(levels, worldId) && (number % 5 === 1 || !!levels[campaignLevelId(number - 1)]);
+}
+
+export function campaignBossUnlocked(levels: Record<string, { stars: number }>, worldId: number): boolean {
+  const world = CAMPAIGN_WORLDS.find((w) => w.id === worldId);
+  return !!world && campaignWorldUnlocked(levels, worldId) && world.levelIds.every((id) => !!levels[id]);
 }
 
 export function campaignCurrentLevel(levels: Record<string, { stars: number }>): number {
-  return CAMPAIGN_LEVEL_DEFS.find((d) => !levels[d.id])?.index ?? CAMPAIGN_LEVEL_DEFS.length + 1;
+  const current = CAMPAIGN_PROGRESSION_DEFS.find((d) => !levels[d.id]);
+  return current ? current.index : CAMPAIGN_PROGRESSION_DEFS.length + 1;
+}
+
+export function campaignCurrentDef(levels: Record<string, { stars: number }>): LevelDef {
+  return CAMPAIGN_PROGRESSION_DEFS.find((d) => !levels[d.id]) ?? CAMPAIGN_PROGRESSION_DEFS[CAMPAIGN_PROGRESSION_DEFS.length - 1];
 }
 
 export function newlyUnlockedCampaignWorld(
@@ -165,12 +343,12 @@ export function newlyUnlockedCampaignWorld(
 }
 
 export function nextCampaignLevelId(id: string): string | null {
-  const number = campaignLevelNumber(id);
-  return number > 0 && number < CAMPAIGN_LEVEL_DEFS.length ? campaignLevelId(number + 1) : null;
+  const index = CAMPAIGN_PROGRESSION_DEFS.findIndex((d) => d.id === id);
+  return index >= 0 && index + 1 < CAMPAIGN_PROGRESSION_DEFS.length ? CAMPAIGN_PROGRESSION_DEFS[index + 1].id : null;
 }
 
 export function campaignComplete(levels: Record<string, { stars: number }>): boolean {
-  return CAMPAIGN_LEVEL_DEFS.every((d) => !!levels[d.id]);
+  return CAMPAIGN_PROGRESSION_DEFS.every((d) => !!levels[d.id]);
 }
 
 export const CHAPTERS = [
@@ -183,6 +361,296 @@ export const CHAPTERS = [
   { n: 7, name: 'Pressure', mech: 'Countdown cells', cells: 'count' },
   { n: 8, name: 'Master', mech: 'Everything together', cells: 'tele' },
 ] as const;
+
+const snake = (size: number) => Array.from({ length: size * size }, (_, i) => {
+  const row = Math.floor(i / size), col = i % size;
+  return row * size + (row % 2 === 0 ? col : size - 1 - col);
+});
+
+const BOSS_CELL_OVERRIDES: Record<number, Record<number, string>> = {
+  1: {},
+  2: { 1: 'dir', 4: 'dir', 8: 'dir' },
+  3: { 1: 'B', 2: 'dir', 5: 'B', 8: 'dir' },
+  4: { 1: 'dir', 4: 'T1', 5: 'T1', 8: 'B' },
+  // Leave two route steps between the freeze cell and its next affected route tile.
+  5: { 1: 'F', 5: 'B', 6: 'F' },
+  6: { 1: 'S', 2: 'G', 4: 'dir', 10: 'G' },
+  7: { 1: 'c5', 2: 'c7', 5: 'B', 8: 'F' },
+  8: { 1: 'dir', 2: 'c5', 4: 'T1', 5: 'T1', 7: 'S', 8: 'F', 10: 'G', 12: 'B' },
+};
+
+function makeBossLevel(chapter: number): LevelDef {
+  const size = chapter <= 3 ? 4 : chapter <= 5 ? 5 : chapter <= 7 ? 6 : 7;
+  const path = snake(size);
+  const overrides = BOSS_CELL_OVERRIDES[chapter];
+  const specialIndices = new Set(Object.keys(overrides).map(Number));
+  const checkpointPathIndices = [0];
+  for (let checkpoint = 1; checkpoint < 5; checkpoint++) {
+    let index = Math.round((path.length - 1) * checkpoint / 5);
+    while (specialIndices.has(index) || checkpointPathIndices.includes(index)) index++;
+    checkpointPathIndices.push(index);
+  }
+  checkpointPathIndices.push(path.length - 1);
+  const tokenAtPathIndex = new Map<number, string>();
+  for (const [indexText, configured] of Object.entries(overrides)) {
+    const index = Number(indexText);
+    if (configured === 'dir') {
+      const delta = path[index + 1] - path[index];
+      tokenAtPathIndex.set(index, delta === -size ? '^' : delta === size ? 'v' : delta === 1 ? '>' : '<');
+    } else tokenAtPathIndex.set(index, configured);
+  }
+  const rows = Array.from({ length: size }, (_, row) => {
+    const tokens = Array.from({ length: size }, (_, col) => {
+      const cell = row * size + col;
+      const pathIndex = path.indexOf(cell);
+      const nodeIndex = checkpointPathIndices.indexOf(pathIndex);
+      return nodeIndex >= 0 ? String(nodeIndex + 1) : tokenAtPathIndex.get(pathIndex) ?? '.';
+    });
+    return tokens.join(' ');
+  });
+  const enteredPath: number[] = [];
+  let movesForSolution = 0;
+  for (let i = 1; i < path.length; i++) {
+    const token = tokenAtPathIndex.get(i);
+    if (tokenAtPathIndex.get(i - 1)?.startsWith('T') && token?.startsWith('T')) continue;
+    enteredPath.push(path[i]);
+    movesForSolution += token === 'B' ? 2 : 1;
+  }
+  const moveLimit = movesForSolution + 2;
+  const objective = chapter === 6 ? 'Activate the switch to open both gates.'
+    : chapter === 7 ? 'Reach countdown cells before they expire.'
+      : chapter === 8 ? 'Combine portals, direction, countdown, freeze, switches and burn.'
+        : chapter === 5 ? 'Plan around freezing zones and burn costs.'
+          : chapter === 4 ? 'Use the paired portals and follow the route.'
+            : chapter === 3 ? 'Account for burn cells while completing the route.'
+              : chapter === 2 ? 'Follow the arrows while reaching each checkpoint.'
+                : 'Reach every cell and the final node in order.';
+  const normalCount = LEVEL_DEFS.filter((def) => def.chapter === chapter).length;
+  return {
+    id: `boss-${String(chapter).padStart(2, '0')}`, chapter, index: normalCount + 1, size, rows,
+    maxMoves: moveLimit, optimal: movesForSolution, title: `${CHAPTERS[chapter - 1].name} Boss`, solution: enteredPath,
+    boss: {
+      undoAllowance: 3, moveLimit,
+      starThresholds: { three: movesForSolution, two: moveLimit },
+      difficulty: chapter < 5 ? 'advanced' : 'expert', objective,
+    },
+  };
+}
+
+export const BOSS_LEVEL_DEFS = CHAPTERS.map(({ n }) => makeBossLevel(n));
+const chapterMysteries = new Set(CHAPTERS.map(({ n }) => LEVEL_DEFS.filter((def) => def.chapter === n).at(-1)?.id).filter((id): id is string => !!id));
+const mysteryDefs = LEVEL_DEFS.map((def) => chapterMysteries.has(def.id)
+  ? {
+      ...def,
+      mystery: {
+        hiddenCells: (def.solution ?? []).slice(1, 4),
+        initialHiddenCount: Math.min(3, Math.max(0, (def.solution ?? []).slice(1, 4).length)),
+        discoverOn: 'enter' as const,
+        difficulty: 'advanced' as const,
+        objective: 'Discover the hidden cells and reach the final node in order.',
+      },
+    }
+  : def);
+
+export function campaignBossLevelId(world: number): string {
+  return `campaign-boss-${String(world).padStart(2, '0')}`;
+}
+
+function makeCampaignBoss(world: CampaignWorld): LevelDef {
+  const size = 4 + Math.floor((world.id - 1) / 10);
+  const N = size * size;
+
+  // High-dispersion deterministic seed for boss
+  const seed = (world.id * 73856093) ^ 0x5bd1e995;
+  const rng = mulberry32(seed);
+
+  // Organic Hamiltonian path for the boss lair
+  const path = hamiltonianPath(size, rng);
+
+  // Checkpoints: 5 to 6 nodes
+  const kCount = Math.min(Math.floor(N / 3), size >= 7 ? 6 : 5);
+  const checkpointIndices = [0];
+  for (let k = 1; k < kCount - 1; k++) {
+    const ideal = Math.round(((N - 1) * k) / (kCount - 1));
+    const jitter = Math.floor(rng() * 3) - 1;
+    const candidate = Math.max(
+      checkpointIndices[k - 1] + 2,
+      Math.min(N - 2 - (kCount - 1 - k) * 2, ideal + jitter)
+    );
+    checkpointIndices.push(candidate);
+  }
+  checkpointIndices.push(N - 1);
+
+  const checkpointIndexSet = new Set(checkpointIndices);
+  const availableIndices = Array.from({ length: N }, (_, i) => i)
+    .filter((i) => !checkpointIndexSet.has(i));
+
+  const tokenAtPathIndex = new Map<number, string>();
+
+  // Boss combinations scale with worldId
+  // 1. Switch & Gate
+  if (world.id >= 5 && availableIndices.length >= 4) {
+    const validPairs: [number, number][] = [];
+    for (let a = 0; a < availableIndices.length; a++) {
+      for (let b = a + 1; b < availableIndices.length; b++) {
+        const j = availableIndices[a];
+        const k = availableIndices[b];
+        if (k - j >= 3 && k < N - 1) {
+          validPairs.push([j, k]);
+        }
+      }
+    }
+    if (validPairs.length > 0) {
+      const pair = validPairs[Math.floor(rng() * validPairs.length)];
+      tokenAtPathIndex.set(pair[0], 'S');
+      tokenAtPathIndex.set(pair[1], 'G');
+      const idxA = availableIndices.indexOf(pair[0]);
+      if (idxA >= 0) availableIndices.splice(idxA, 1);
+      const idxB = availableIndices.indexOf(pair[1]);
+      if (idxB >= 0) availableIndices.splice(idxB, 1);
+    }
+  }
+
+  // 2. Countdown pressure
+  if (world.id >= 10 && availableIndices.length > 0) {
+    const earlyCandidates = availableIndices.filter((idx) => idx >= 1 && idx <= 4);
+    if (earlyCandidates.length > 0) {
+      const idx = earlyCandidates[Math.floor(rng() * earlyCandidates.length)];
+      const countVal = Math.min(5, Math.max(2, idx + 1));
+      tokenAtPathIndex.set(idx, `c${countVal}`);
+      const pos = availableIndices.indexOf(idx);
+      if (pos >= 0) availableIndices.splice(pos, 1);
+    }
+  }
+
+  // 3. Freeze trap
+  if (world.id >= 15 && availableIndices.length > 0) {
+    const freezeCandidates = availableIndices.filter((idx) => {
+      if (idx + 4 >= N) return false;
+      return (
+        chebDist(size, path[idx], path[idx + 2]) >= 2 &&
+        chebDist(size, path[idx], path[idx + 3]) >= 2 &&
+        chebDist(size, path[idx], path[idx + 4]) >= 2
+      );
+    });
+    if (freezeCandidates.length > 0) {
+      const idx = freezeCandidates[Math.floor(rng() * freezeCandidates.length)];
+      tokenAtPathIndex.set(idx, 'F');
+      const pos = availableIndices.indexOf(idx);
+      if (pos >= 0) availableIndices.splice(pos, 1);
+    }
+  }
+
+  // 4. Burn tiles
+  if (world.id >= 3 && availableIndices.length > 0) {
+    const maxBurn = size >= 6 ? 2 : 1;
+    for (let b = 0; b < maxBurn; b++) {
+      if (!availableIndices.length) break;
+      const pickIdx = Math.floor(rng() * availableIndices.length);
+      const idx = availableIndices[pickIdx];
+      tokenAtPathIndex.set(idx, 'B');
+      availableIndices.splice(pickIdx, 1);
+    }
+  }
+
+  // 5. Direction arrows
+  if (availableIndices.length > 0) {
+    const dirCount = Math.min(size >= 6 ? 3 : 2, availableIndices.length);
+    for (let d = 0; d < dirCount; d++) {
+      if (!availableIndices.length) break;
+      const pickIdx = Math.floor(rng() * availableIndices.length);
+      const idx = availableIndices[pickIdx];
+      if (idx < N - 1) {
+        const dir = dirOfCells(size, path[idx], path[idx + 1]);
+        tokenAtPathIndex.set(idx, dirTokenFrom(dir));
+      }
+      availableIndices.splice(pickIdx, 1);
+    }
+  }
+
+  // Build grid rows
+  const checkpointMap = new Map<number, number>();
+  checkpointIndices.forEach((cellIdx, i) => checkpointMap.set(path[cellIdx], i + 1));
+
+  const cells = new Array<string>(N).fill('.');
+  for (let cell = 0; cell < N; cell++) {
+    const nodeNum = checkpointMap.get(cell);
+    if (nodeNum !== undefined) {
+      cells[cell] = String(nodeNum);
+    } else {
+      const pathIdx = path.indexOf(cell);
+      const tok = tokenAtPathIndex.get(pathIdx);
+      cells[cell] = tok ?? '.';
+    }
+  }
+
+  const rows = Array.from({ length: size }, (_, row) =>
+    cells.slice(row * size, (row + 1) * size).join(' ')
+  );
+
+  const solution = path.slice(1);
+  let solutionMoves = 0;
+  for (let i = 1; i < path.length; i++) {
+    const tok = tokenAtPathIndex.get(i);
+    solutionMoves += tok === 'B' ? 2 : 1;
+  }
+  const moveLimit = solutionMoves + 2;
+
+  const objective = world.id > 40
+    ? 'Master the 8×8 apex boss route with multi-mechanic coordination.'
+    : world.id > 30
+      ? 'Coordinate gates, direction guides, and hazard avoidance.'
+      : world.id > 20
+        ? 'Overcome freeze zones, burn costs, and tight move budgeting.'
+        : world.id > 10
+          ? 'Navigate the expanding board and master directional flow.'
+          : 'Follow the directional arrows and reach each checkpoint in order.';
+
+  return {
+    id: campaignBossLevelId(world.id),
+    chapter: 9,
+    index: CAMPAIGN_LEVEL_DEFS.length + world.id,
+    size,
+    rows,
+    maxMoves: moveLimit,
+    optimal: solutionMoves,
+    title: `${world.name} Boss`,
+    solution,
+    boss: {
+      undoAllowance: 3,
+      moveLimit,
+      starThresholds: { three: solutionMoves, two: moveLimit },
+      difficulty: world.id > 30 ? 'expert' : 'advanced',
+      objective,
+      campaignWorld: world.id,
+    },
+  };
+}
+
+for (const world of CAMPAIGN_WORLDS) {
+  const lastLevel = CAMPAIGN_LEVEL_DEFS[world.lastLevel - 1];
+  if (!lastLevel.mystery) {
+    const hiddenCells = (lastLevel.solution ?? []).slice(1, 4);
+    lastLevel.mystery = {
+      hiddenCells,
+      initialHiddenCount: hiddenCells.length,
+      discoverOn: 'enter',
+      difficulty: world.id > 35 ? 'expert' : 'advanced',
+      objective: 'Discover the hidden cells and reach the final node in order.',
+    };
+  }
+}
+
+export const CAMPAIGN_BOSS_LEVEL_DEFS = CAMPAIGN_WORLDS.map(makeCampaignBoss);
+export const CAMPAIGN_PROGRESSION_DEFS: LevelDef[] = CAMPAIGN_WORLDS.flatMap((world) => [
+  ...CAMPAIGN_LEVEL_DEFS.filter((def) => def.index >= world.firstLevel && def.index <= world.lastLevel),
+  CAMPAIGN_BOSS_LEVEL_DEFS[world.id - 1],
+]);
+export const CHAPTER_LEVEL_DEFS: LevelDef[] = CHAPTERS.flatMap(({ n }) => [
+  ...mysteryDefs.filter((def) => def.chapter === n),
+  BOSS_LEVEL_DEFS[n - 1],
+]);
+export const ALL_LEVEL_DEFS = [...mysteryDefs, ...CAMPAIGN_PROGRESSION_DEFS, ...BOSS_LEVEL_DEFS];
 
 const cache = new Map<string, Level>();
 export function getLevel(id: string): Level {
@@ -197,16 +665,16 @@ export function getLevel(id: string): Level {
 }
 
 export function levelsOfChapter(ch: number): LevelDef[] {
-  return LEVEL_DEFS.filter((d) => d.chapter === ch);
+  return CHAPTER_LEVEL_DEFS.filter((d) => d.chapter === ch);
 }
 
 export function nextLevelId(id: string): string | null {
-  const i = LEVEL_DEFS.findIndex((d) => d.id === id);
-  return i >= 0 && i + 1 < LEVEL_DEFS.length ? LEVEL_DEFS[i + 1].id : null;
+  const i = CHAPTER_LEVEL_DEFS.findIndex((d) => d.id === id);
+  return i >= 0 && i + 1 < CHAPTER_LEVEL_DEFS.length ? CHAPTER_LEVEL_DEFS[i + 1].id : null;
 }
 
 export function levelNumber(id: string): number {
-  return LEVEL_DEFS.findIndex((d) => d.id === id) + 1;
+  return CHAPTER_LEVEL_DEFS.findIndex((d) => d.id === id) + 1;
 }
 
 export type Mech = 'dir' | 'burn' | 'tele' | 'freeze' | 'switch' | 'count' | 'bonus';
@@ -239,8 +707,9 @@ export const MECH_INTRO: Record<Exclude<Mech, 'bonus'>, { title: string; body: s
   count: { title: 'Countdown', body: 'Reach it before its number hits zero. Every move ticks it down.', kind: 'count' },
 };
 
-export function skinUnlocked(skin: SkinId, stars: number, chaptersDone: number[]): boolean {
+export function skinUnlocked(skin: SkinId, stars: number, chaptersDone: number[], unlockedSkins: SkinId[] = []): boolean {
   if (skin === 'ink') return stars >= 30;
   if (skin === 'sand') return chaptersDone.includes(6);
+  if (skin === 'treasure') return unlockedSkins.includes('treasure');
   return true;
 }

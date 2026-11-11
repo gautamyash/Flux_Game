@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Share, View } from 'react-native';
 import { Level, GameState, failTitle, parSeconds } from '../../engine';
 import { Board } from '../../components/Board';
 import { CellPreview } from '../../components/CellPreview';
 import { StarShape } from '../../components/Icon';
-import { Button, Overlay, Sheet, T, fmtTime } from '../../components/ui';
+import { Button, Chip, Overlay, Sheet, T, fmtTime } from '../../components/ui';
 import { useTheme } from '../../theme/ThemeProvider';
 import { AchievementDef, achievementById } from '../../lib/achievements';
 import { Badge } from '../../components/Badge';
@@ -12,6 +12,10 @@ import { CAMPAIGN_WORLDS, CHAPTERS } from '../../lib/levels';
 import { ResultData, MAX_HINTS } from './useGame';
 import type { SubmissionResult } from '../../cloud/leaderboards';
 import { UpdateNotice } from '../../components/UpdateNotice';
+import { RewardChest } from '../../components/RewardChest';
+import { CompletionRewardRecord, redeemReward, trustedNow, useStore } from '../../store/store';
+import { rewardDefinition } from '../../lib/rewards';
+import { haptic } from '../../lib/haptics';
 
 export function ResultRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
   const { t } = useTheme();
@@ -19,6 +23,83 @@ export function ResultRow({ label, value, good }: { label: string; value: string
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
       <T v="small">{label}</T>
       <T v="small" color={good ? t.success : t.text}>{value}</T>
+    </View>
+  );
+}
+
+function expiryTimeLeft(expiresAt: number, now: number): string {
+  const diff = Math.max(0, expiresAt - now);
+  const hours = Math.floor(diff / (3600 * 1000));
+  const mins = Math.floor((diff % (3600 * 1000)) / (60 * 1000));
+  const secs = Math.floor((diff % (60 * 1000)) / 1000);
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  if (mins > 0) return `${mins}m ${secs}s left`;
+  return `${secs}s left`;
+}
+
+function RewardRevealCard({ reward }: { reward: CompletionRewardRecord }) {
+  const { t } = useTheme();
+  const def = rewardDefinition(reward.rewardId);
+  const live = useStore((s) => s.completionRewards[`${reward.progression}:${reward.levelId}`]) ?? reward;
+  const [now, setNow] = useState(trustedNow());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(trustedNow()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const rarityColor = def.rarity === 'legendary' ? '#F0B642'
+    : def.rarity === 'epic' ? '#A956E5'
+    : def.rarity === 'rare' ? '#5EF0C2'
+    : t.text2;
+
+  const isExpired = live.status === 'expired' || (live.status === 'pending' && now >= live.expiresAt);
+  const isPending = live.status === 'pending' && !isExpired;
+  const isRedeemed = live.status === 'redeemed';
+  const isActive = live.status === 'active';
+  const isCompleted = live.status === 'completed';
+
+  const onRedeem = () => {
+    if (isExpired) {
+      setError('This reward has expired and can no longer be redeemed.');
+      haptic('error');
+      return;
+    }
+    const res = redeemReward(live.chestId);
+    if (!res.ok) {
+      setError(res.reason);
+      haptic('error');
+    } else {
+      setError(null);
+      haptic('success');
+    }
+  };
+
+  return (
+    <View style={{ gap: 8, alignItems: 'center', width: '100%', paddingVertical: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Chip tint={rarityColor}>{def.rarity.toUpperCase()}</Chip>
+        {isPending ? (
+          <T v="cap" color={t.text2}>Expires in {expiryTimeLeft(live.expiresAt, now)}</T>
+        ) : isExpired ? (
+          <T v="cap" color={t.danger}>Expired</T>
+        ) : null}
+      </View>
+      <T v="title" align="center">{def.name}</T>
+      <T v="small" align="center" color={t.text2}>{def.description}</T>
+      {error ? <T v="cap" color={t.danger} align="center">{error}</T> : null}
+      {isPending ? (
+        <Button label="Redeem" variant="primary" height={40} onPress={onRedeem} style={{ width: '100%', marginTop: 4 }} />
+      ) : isRedeemed ? (
+        <Chip tint={t.success}>✓ Redeemed · Ready for next run</Chip>
+      ) : isActive ? (
+        <Chip tint={t.accent}>✓ Active · Power-up running</Chip>
+      ) : isCompleted ? (
+        <Chip tint={t.success}>✓ Added to inventory</Chip>
+      ) : isExpired ? (
+        <Chip tint={t.disabled}>Reward expired</Chip>
+      ) : null}
     </View>
   );
 }
@@ -42,12 +123,22 @@ export function ResultView({ level, state, data, kind, leaderboardSubmission, on
     <Overlay anchor="center">
       <Sheet style={{ alignItems: 'center' }}>
         <T v="h2" color={data.campaignComplete ? CAMPAIGN_WORLDS[49].palette.accent : unlockedWorld?.palette.accent}>{resultTitle}</T>
-        {unlockedWorld ? <T v="body" align="center" color={unlockedWorld.palette.accent}>{unlockedWorld.name} is now open. Its five levels are ready on the Campaign map.</T> : null}
-        {kind === 'campaign' && data.campaignComplete ? <T v="body" align="center" color={CAMPAIGN_WORLDS[49].palette.accent}>You completed all 250 levels and reached {CAMPAIGN_WORLDS[49].name}. Your campaign progress is saved.</T> : null}
+        {level.boss ? <T v="body" align="center" color={t.bonus}>{data.outcome?.firstSolve
+          ? level.boss.campaignWorld ? `World ${level.boss.campaignWorld} Boss defeated. Your best stars are saved once.` : `Chapter ${level.chapter} Boss defeated. Your best stars are saved once.`
+          : 'Boss replay complete. Your best stars are kept.'}</T> : null}
+        {unlockedWorld ? <T v="body" align="center" color={unlockedWorld.palette.accent}>{unlockedWorld.name} is now open. Complete its five levels to challenge its Boss.</T> : null}
+        {kind === 'campaign' && data.campaignComplete ? <T v="body" align="center" color={CAMPAIGN_WORLDS[49].palette.accent}>You completed all 250 levels and 50 World Bosses, reaching {CAMPAIGN_WORLDS[49].name}. Your campaign progress is saved.</T> : null}
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {[1, 2, 3].map((i) => <StarShape key={i} size={36} filled={i <= data.stars} color={t.bonus} empty={t.grid} />)}
         </View>
         <Board level={level} state={state} size={120} t={board} preview />
+        {data.outcome?.completionRewarded && data.outcome.completionReward ? (
+          <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 8 }}>
+            <T v="cap" color={t.bonus}>FIRST COMPLETION REWARD</T>
+            <T v="small" align="center" color={t.text2}>Your personal chest is saved to this player and level.</T>
+            <RewardChest style={{ maxWidth: 280 }} rewardContent={<RewardRevealCard reward={data.outcome.completionReward} />} />
+          </View>
+        ) : null}
         <View style={{ alignSelf: 'stretch' }}>
           <ResultRow label="Time" value={`${fmtTime(data.time)} / ${fmtTime(parSeconds(level))} target`} good={data.time <= parSeconds(level)} />
           <ResultRow label="Hints" value={data.hints === 0 ? 'None' : String(data.hints)} good={data.hints === 0} />
@@ -59,9 +150,9 @@ export function ResultView({ level, state, data, kind, leaderboardSubmission, on
           <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 8 }}>
             <T v="small" align="center">
               {leaderboardSubmission === 'pending' ? 'Submitting your score…'
-                : leaderboardSubmission === 'submitted' ? 'Score submitted to the leaderboard.'
+                : leaderboardSubmission === 'submitted' ? kind === 'campaign' ? 'Score submitted to the Campaign leaderboard.' : 'Score submitted to the leaderboard.'
                 : leaderboardSubmission === 'duplicate' ? 'This run was already submitted.'
-                : leaderboardSubmission === 'not-better' ? 'Run recorded. Your leaderboard best remains unchanged.'
+                : leaderboardSubmission === 'not-better' ? kind === 'campaign' ? 'Run recorded. Your Campaign leaderboard best remains unchanged.' : 'Run recorded. Your leaderboard best remains unchanged.'
                 : leaderboardSubmission === 'unauthenticated' ? 'Sign in with Google to submit leaderboard scores.'
                 : leaderboardSubmission === 'unavailable' ? 'Could not submit while offline. Your game progress is safe.'
                 : leaderboardSubmission === 'rejected' ? 'Firebase rejected this score submission. Check the deployed rules.'
@@ -112,7 +203,8 @@ export function FailedView({ level, state, canUndo, onUndo, onRetry, onSkip }: {
   level: Level; state: GameState; canUndo: boolean; onUndo: () => void; onRetry: () => void; onSkip?: () => void;
 }) {
   const { t } = useTheme();
-  const f = failTitle(state.fail ?? 'moves', state.moves, level.maxMoves);
+  const usedMoves = level.boss ? state.budgetMoves ?? state.moves : state.moves;
+  const f = failTitle(state.fail ?? 'moves', usedMoves, level.boss?.moveLimit ?? level.maxMoves);
   return (
     <Overlay anchor="bottom">
       <Sheet>

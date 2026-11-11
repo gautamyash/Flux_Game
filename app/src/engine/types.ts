@@ -25,6 +25,23 @@ export interface CellDef {
   open?: boolean;
 }
 
+export interface MysteryConfig {
+  hiddenCells: number[];
+  initialHiddenCount: number;
+  discoverOn: 'enter' | 'adjacent';
+  difficulty: 'standard' | 'advanced' | 'expert';
+  objective: string;
+}
+
+export interface BossConfig {
+  undoAllowance: number;
+  moveLimit: number;
+  starThresholds: { three: number; two: number };
+  difficulty: 'advanced' | 'expert';
+  objective: string;
+  campaignWorld?: number;
+}
+
 export interface LevelDef {
   id: string;
   chapter: number;
@@ -36,6 +53,8 @@ export interface LevelDef {
   title?: string;
   /** cells to enter in order (teleport exits implicit); used for hints */
   solution?: number[];
+  mystery?: MysteryConfig;
+  boss?: BossConfig;
 }
 
 export interface Level {
@@ -59,6 +78,8 @@ export interface Level {
   /** cells that must all be visited before the last node (everything except walls and bonus stars) */
   required: number[];
   solution?: number[];
+  mystery?: MysteryConfig;
+  boss?: BossConfig;
 }
 
 export type Status = 'playing' | 'solved' | 'failed';
@@ -78,6 +99,10 @@ export interface GameState {
   /** number of the next node to reach (2 at start) */
   nextNode: number;
   moves: number;
+  /** Move-budget spend is monotonic across undo for Boss levels. */
+  budgetMoves?: number;
+  /** Mystery discovery is knowledge, so it survives path undo. */
+  revealedCells?: number[];
   flips: number;
   freezes: FreezeRecord[];
   bonuses: number[];

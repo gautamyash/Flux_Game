@@ -1,13 +1,14 @@
 import { AppState as RNAppState } from 'react-native';
 import { AVATAR_COLORS, applyCloud, defaultSettings, flushStore, getState, isValidDateKey, setSyncedUid, subscribe } from '../store/store';
 import type { AppState } from '../store/store';
-import { ALL_LEVEL_DEFS } from '../lib/levels';
+import { ALL_LEVEL_DEFS, CAMPAIGN_PROGRESSION_DEFS } from '../lib/levels';
 import { SKINS } from '../theme/tokens';
 import type { SkinId } from '../theme/tokens';
 import { cloudConfigured } from '../config';
 import { ensureFirebaseUser, transactRemote } from './auth';
 import { syncLeaderboardDisplayName } from './leaderboards';
 import { SyncData, mergeSync, sameSync, toSyncData } from './merge';
+import { REWARD_CATALOG, REWARD_RARITY_PERCENT, RewardId, RewardRarity, RewardStatus } from '../lib/rewards';
 
 export type SyncState = 'off' | 'idle' | 'syncing' | 'offline' | 'needs-login';
 interface Status { state: SyncState; lastAt: number | null; error: string | null }
@@ -42,8 +43,12 @@ const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const nonNegative = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 const whole = (v: unknown): v is number => nonNegative(v) && Number.isInteger(v);
 const levelIds = new Set(ALL_LEVEL_DEFS.map((level) => level.id));
+const campaignLevelIds = new Set(CAMPAIGN_PROGRESSION_DEFS.map((level) => level.id));
 const settingKeys = new Set(Object.keys(defaultSettings));
 const skinIds = new Set(SKINS.map((skin) => skin.id));
+const rewardIds = new Set(REWARD_CATALOG.map((reward) => reward.id));
+const rarities = new Set(Object.keys(REWARD_RARITY_PERCENT));
+const rewardStatuses = new Set(['pending', 'redeemed', 'active', 'completed', 'expired']);
 
 function validCloudData(value: unknown): value is SyncData {
   if (!isRecord(value) || value.v !== 1 || typeof value.onboarded !== 'boolean'
@@ -61,10 +66,31 @@ function validCloudData(value: unknown): value is SyncData {
     || !['system', 'light', 'dark'].includes(String(settings.themeMode)) || !skinIds.has(settings.skin as SkinId)
     || !whole(settings.notifyHour) || settings.notifyHour > 23) return false;
 
-  if (!isRecord(value.levels) || !isRecord(value.daily) || !isRecord(value.achievements) || !isRecord(value.seen)) return false;
-  for (const [id, raw] of Object.entries(value.levels)) {
+  if (!isRecord(value.levels) || (value.campaignLevels !== undefined && !isRecord(value.campaignLevels))
+    || (value.completionRewards !== undefined && !isRecord(value.completionRewards))
+    || !isRecord(value.daily) || !isRecord(value.achievements) || !isRecord(value.seen)) return false;
+  for (const [id, raw] of [...Object.entries(value.levels), ...Object.entries((value.campaignLevels as Record<string, unknown> | undefined) ?? {})]) {
     if (!levelIds.has(id) || !isRecord(raw) || !whole(raw.stars) || raw.stars < 1 || raw.stars > 3
       || !nonNegative(raw.moves) || !nonNegative(raw.time) || typeof raw.bonus !== 'boolean' || typeof raw.hintless !== 'boolean') return false;
+  }
+  for (const id of Object.keys((value.campaignLevels as Record<string, unknown> | undefined) ?? {})) if (!campaignLevelIds.has(id)) return false;
+  if (value.unlockedBoardSkins !== undefined && (!Array.isArray(value.unlockedBoardSkins)
+    || value.unlockedBoardSkins.some((skin) => typeof skin !== 'string' || !skinIds.has(skin as SkinId)))) return false;
+  if (value.unlockedProfileBadges !== undefined && (!Array.isArray(value.unlockedProfileBadges)
+    || value.unlockedProfileBadges.some((badge) => typeof badge !== 'string' || badge.length > 80))) return false;
+  for (const [key, raw] of Object.entries((value.completionRewards as Record<string, unknown> | undefined) ?? {})) {
+    if (!isRecord(raw) || typeof raw.playerId !== 'string' || !raw.playerId
+      || (raw.progression !== 'chapters' && raw.progression !== 'campaign')
+      || typeof raw.levelId !== 'string' || !levelIds.has(raw.levelId)
+      || (raw.progression === 'campaign' ? !campaignLevelIds.has(raw.levelId) : campaignLevelIds.has(raw.levelId))
+      || typeof raw.chestId !== 'string' || !raw.chestId || !nonNegative(raw.generatedAt)
+      || key !== `${raw.progression}:${raw.levelId}`) return false;
+    if ((raw.rewardId !== undefined && (typeof raw.rewardId !== 'string' || !rewardIds.has(raw.rewardId as RewardId)))
+      || (raw.rarity !== undefined && (typeof raw.rarity !== 'string' || !rarities.has(raw.rarity)))
+      || (raw.status !== undefined && (typeof raw.status !== 'string' || !rewardStatuses.has(raw.status)))
+      || (raw.expiresAt !== undefined && !nonNegative(raw.expiresAt))) return false;
+    for (const time of [raw.redeemedAt, raw.activatedAt, raw.effectEndsAt, raw.completedAt]) if (time !== undefined && !nonNegative(time)) return false;
+    if (raw.activatedRunId !== undefined && typeof raw.activatedRunId !== 'string') return false;
   }
   for (const [day, raw] of Object.entries(value.daily)) {
     if (!isValidDateKey(day) || !isRecord(raw) || !whole(raw.stars) || raw.stars < 1 || raw.stars > 3
@@ -124,7 +150,8 @@ export function syncNow(): Promise<SyncResult> {
       const safeLocal = sameSync(localNow, merged) ? merged : mergeSync(localNow, merged, cur.syncedUid === uid);
       if (!sameSync(safeLocal, localNow)) {
         applyCloud({
-          onboarded: safeLocal.onboarded, settings: safeLocal.settings, levels: safeLocal.levels, daily: safeLocal.daily, stats: safeLocal.stats,
+          onboarded: safeLocal.onboarded, settings: safeLocal.settings, levels: safeLocal.levels, campaignLevels: safeLocal.campaignLevels, completionRewards: safeLocal.completionRewards,
+          unlockedBoardSkins: safeLocal.unlockedBoardSkins, unlockedProfileBadges: safeLocal.unlockedProfileBadges, daily: safeLocal.daily, stats: safeLocal.stats,
           achievements: safeLocal.achievements, seen: safeLocal.seen, lastLevelId: safeLocal.lastLevelId, profile: safeLocal.profile,
           epoch: safeLocal.epoch, clockMax: Math.max(cur.clockMax, safeLocal.clockMax),
         } as Partial<AppState>);
@@ -134,6 +161,13 @@ export function syncNow(): Promise<SyncResult> {
       setSyncedUid(uid);
       await flushStore();
       setStatus({ state: 'idle', lastAt: Date.now(), error: null });
+      void (async () => {
+        try {
+          const { syncReferralRewards, triggerReferralCompletionCheck } = await import('./referral');
+          await triggerReferralCompletionCheck(uid);
+          await syncReferralRewards(uid);
+        } catch { /* offline safe */ }
+      })();
       return { ok: true };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Could not sync progress. Your local progress is safe; try again when online.';
@@ -153,7 +187,8 @@ export async function mergeLocalProgress(json: string | null): Promise<void> {
   const cur = getState();
   const merged = mergeSync(toSyncData(cur), imported, false);
   applyCloud({
-    onboarded: merged.onboarded, settings: merged.settings, levels: merged.levels, daily: merged.daily, stats: merged.stats,
+    onboarded: merged.onboarded, settings: merged.settings, levels: merged.levels, campaignLevels: merged.campaignLevels, completionRewards: merged.completionRewards,
+    unlockedBoardSkins: merged.unlockedBoardSkins, unlockedProfileBadges: merged.unlockedProfileBadges, daily: merged.daily, stats: merged.stats,
     achievements: merged.achievements, seen: merged.seen, lastLevelId: merged.lastLevelId, profile: merged.profile,
     epoch: merged.epoch, clockMax: Math.max(cur.clockMax, merged.clockMax),
   } as Partial<AppState>);

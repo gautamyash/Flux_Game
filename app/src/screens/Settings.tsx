@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon';
 import { Avatar, Button, Card, Overlay, Screen, Segmented, Sheet, T, Toggle, TopBar } from '../components/ui';
 import { createSession, current } from '../engine';
 import { useNav } from '../nav/Nav';
-import { AVATAR_COLORS, chaptersDone, resetAll, setProfile, totalStars, updateSettings, useSettings, useStore } from '../store/store';
+import { AVATAR_COLORS, chaptersDone, resetAll, setProfile, totalStars, updateNotificationPreferences, updateSettings, useNotificationPreferences, useSettings, useStore } from '../store/store';
 import { refreshNotifications, requestNotificationPermission } from '../lib/notifications';
 import { fonts } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeProvider';
@@ -28,9 +28,11 @@ function Row({ label, sub, children }: { label: string; sub?: string; children: 
 export function SettingsScreen() {
   const nav = useNav();
   const s = useSettings();
+  const notifPrefs = useNotificationPreferences();
   const [confirm, setConfirm] = useState(false);
   const { t } = useTheme();
   const profile = useStore((x) => x.profile);
+  const unlockedProfileBadges = useStore((x) => x.unlockedProfileBadges);
   const [name, setName] = useState(profile.name);
   const [notifyMsg, setNotifyMsg] = useState('');
   const toggleNotify = async (on: boolean) => {
@@ -78,19 +80,66 @@ export function SettingsScreen() {
                 style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c, borderWidth: profile.avatar === i ? 3 : 0, borderColor: t.text }} />
             ))}
           </View>
+          <View style={{ gap: 8, paddingTop: 4 }}>
+            <T v="cap">PROFILE BADGE</T>
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="No profile badge"
+                accessibilityState={{ selected: !profile.badge }}
+                onPress={() => setProfile({ badge: null })}
+                style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: !profile.badge ? t.accent : t.raised, borderWidth: 1, borderColor: !profile.badge ? t.accent : t.grid }}
+              >
+                <T v="cap" color={!profile.badge ? t.onAccent : t.text}>None</T>
+              </Pressable>
+              {unlockedProfileBadges.includes('prism') ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Prism profile badge"
+                  accessibilityState={{ selected: profile.badge === 'prism' }}
+                  onPress={() => setProfile({ badge: 'prism' })}
+                  style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: profile.badge === 'prism' ? '#A956E5' : t.raised, borderWidth: 1.5, borderColor: profile.badge === 'prism' ? '#FFD76A' : t.grid, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <T v="cap" color={profile.badge === 'prism' ? '#FFF' : t.text}>◆ Prism</T>
+                  {profile.badge === 'prism' ? <Icon name="check" size={14} color="#FFF" /> : null}
+                </Pressable>
+              ) : (
+                <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: t.plate, borderWidth: 1, borderColor: t.grid, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: 0.6 }}>
+                  <Icon name="lock" size={12} color={t.disabled} />
+                  <T v="cap" color={t.text2}>Prism (Chest Reward)</T>
+                </View>
+              )}
+            </View>
+          </View>
           <T v="cap">Your progress, stars, badges and unfinished puzzle are saved on this phone under this profile (ID {profile.id}).</T>
         </Card>
         <Card style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
-          <T v="cap" style={{ paddingTop: 8 }}>REMINDERS</T>
-          <Row label="Puzzle reminders" sub="Daily puzzle, streak alerts and a nudge if you are away"><Toggle label="Puzzle reminders" value={s.notify} onChange={(v) => void toggleNotify(v)} /></Row>
+          <T v="cap" style={{ paddingTop: 8 }}>NOTIFICATIONS & REMINDERS</T>
+          <Row label="Allow notifications" sub="Quiet hours 9 PM – 9 AM; max 2 per day"><Toggle label="Allow notifications" value={s.notify} onChange={(v) => void toggleNotify(v)} /></Row>
           {s.notify ? (
-            <View style={{ paddingBottom: 8 }}>
-              <T v="cap" style={{ paddingBottom: 6 }}>DAILY REMINDER TIME</T>
+            <View style={{ paddingBottom: 8, gap: 4 }}>
+              <T v="cap" style={{ paddingTop: 6, paddingBottom: 4 }}>DAILY REMINDER TIME</T>
               <Segmented
                 options={[{ label: '9 AM', value: 9 }, { label: '1 PM', value: 13 }, { label: '7 PM', value: 19 }, { label: '9 PM', value: 21 }]}
                 value={s.notifyHour}
                 onChange={(v) => { updateSettings({ notifyHour: v }); setTimeout(() => void refreshNotifications(), 0); }}
               />
+              <T v="cap" style={{ paddingTop: 10, paddingBottom: 2 }}>NOTIFICATION CATEGORIES</T>
+              <Row label="Daily puzzles & streaks" sub="New daily challenge and streak save alert">
+                <Toggle label="Daily puzzles" value={notifPrefs.daily} onChange={(v) => { updateNotificationPreferences({ daily: v }); setTimeout(() => void refreshNotifications(), 0); }} />
+              </Row>
+              <Row label="Reward chest expiry" sub="Alert before unredeemed reward chests expire">
+                <Toggle label="Reward expiry" value={notifPrefs.rewards} onChange={(v) => { updateNotificationPreferences({ rewards: v }); setTimeout(() => void refreshNotifications(), 0); }} />
+              </Row>
+              <Row label="Full energy refill" sub="Alert when energy is completely refilled to 20/20">
+                <Toggle label="Energy refill" value={notifPrefs.energy} onChange={(v) => { updateNotificationPreferences({ energy: v }); setTimeout(() => void refreshNotifications(), 0); }} />
+              </Row>
+              <Row label="Hints renewal" sub="Alert when hint allowance genuinely renews">
+                <Toggle label="Hints renewal" value={notifPrefs.hints} onChange={(v) => { updateNotificationPreferences({ hints: v }); setTimeout(() => void refreshNotifications(), 0); }} />
+              </Row>
+              <Row label="Milestones & updates" sub="Campaign progress and major app updates">
+                <Toggle label="Milestones" value={notifPrefs.milestones} onChange={(v) => { updateNotificationPreferences({ milestones: v, updates: v }); setTimeout(() => void refreshNotifications(), 0); }} />
+              </Row>
             </View>
           ) : null}
           {notifyMsg ? <T v="cap" color={t.danger} style={{ paddingBottom: 8 }}>{notifyMsg}</T> : null}
@@ -108,6 +157,14 @@ export function SettingsScreen() {
           <Segmented options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} value={s.themeMode} onChange={(v) => updateSettings({ themeMode: v })} />
           <Pressable accessibilityRole="button" onPress={() => nav.push({ name: 'themes' })}>
             <Row label="Board theme" sub={SKINS.find((k) => k.id === s.skin)?.name}><Icon name="chevron" size={22} color="#888" /></Row>
+          </Pressable>
+        </Card>
+        <Card style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+          <Pressable accessibilityRole="button" onPress={() => nav.push({ name: 'referral' })}>
+            <Row label="Refer & Earn" sub="Invite friends, get reward chests"><Icon name="chevron" size={22} color="#888" /></Row>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => nav.push({ name: 'rewards' })}>
+            <Row label="Rewards inventory" sub="Chests, active boosts and history"><Icon name="chevron" size={22} color="#888" /></Row>
           </Pressable>
         </Card>
         <Card style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
@@ -146,6 +203,7 @@ export function ThemesScreen() {
   const { t } = useTheme();
   const s = useSettings();
   const levels = useStore((x) => x.levels);
+  const unlockedBoardSkins = useStore((x) => x.unlockedBoardSkins);
   const stars = totalStars(levels);
   const done = chaptersDone(levels);
   const lv = practiceLevel();
@@ -155,7 +213,7 @@ export function ThemesScreen() {
       <TopBar title="Board themes" onBack={nav.pop} />
       <ScrollView contentContainerStyle={{ gap: 10, paddingVertical: 8 }}>
         {SKINS.map((k) => {
-          const open = skinUnlocked(k.id as SkinId, stars, done);
+          const open = skinUnlocked(k.id as SkinId, stars, done, unlockedBoardSkins);
           const sel = s.skin === k.id;
           return (
             <Pressable key={k.id} disabled={!open} accessibilityRole="button" accessibilityState={{ selected: sel, disabled: !open }} onPress={() => updateSettings({ skin: k.id })}>

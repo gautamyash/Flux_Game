@@ -97,7 +97,7 @@ export const dark: Palette = {
   scrim: 'rgba(0,0,0,0.62)',
 };
 
-export type SkinId = 'paper' | 'graphite' | 'aurora' | 'ink' | 'sand' | 'contrast';
+export type SkinId = 'paper' | 'graphite' | 'aurora' | 'ink' | 'sand' | 'contrast' | 'treasure';
 
 export const SKINS: { id: SkinId; name: string; sub: string; unlockStars: number; unlockChapter: number }[] = [
   { id: 'paper', name: 'Paper', sub: 'Light and dark pair', unlockStars: 0, unlockChapter: 0 },
@@ -106,6 +106,7 @@ export const SKINS: { id: SkinId; name: string; sub: string; unlockStars: number
   { id: 'ink', name: 'Ink', sub: 'Unlock at 30 stars', unlockStars: 30, unlockChapter: 0 },
   { id: 'sand', name: 'Sand', sub: 'Finish Chapter 6', unlockStars: 0, unlockChapter: 6 },
   { id: 'contrast', name: 'High contrast', sub: 'Maximum clarity', unlockStars: 0, unlockChapter: 0 },
+  { id: 'treasure', name: 'Treasure', sub: 'Legendary chest reward', unlockStars: 0, unlockChapter: 0 },
 ];
 
 const skinOverrides: Record<Exclude<SkinId, 'paper'>, Partial<Palette>> = {
@@ -114,6 +115,7 @@ const skinOverrides: Record<Exclude<SkinId, 'paper'>, Partial<Palette>> = {
   ink: { dark: false, surface: '#FAFAFA', raised: '#FFFFFF', grid: '#CFCFCF', text: '#111111', text2: '#555555', accent: '#111111', accentSoft: '#E4E4E4', onAccent: '#FFFFFF', pathA: '#444444', pathB: '#111111', done: '#111111', plate: '#E4E4E4', dead: '#D2D2D2', deadLine: '#777777', dir: '#3A44B8', burn: '#C4540F', tele: '#6A38C0', freeze: '#1573A8', sw: '#B02566', gate: '#444444', bonus: '#A87300', count: '#B3261E', char: '#222222', danger: '#B3261E' },
   sand: { dark: false, surface: '#FBF3E4', raised: '#FFF9EE', grid: '#D5C09A', text: '#2B2118', text2: '#6B5A45', accent: '#B4531F', accentSoft: '#F3D9C3', onAccent: '#FFFFFF', pathA: '#D67A3A', pathB: '#8A3A16', done: '#8A3A16', plate: '#E8D8B8', dead: '#E0CFAE', deadLine: '#A38C62', dir: '#4A56D6', burn: '#B4531F', tele: '#7A45D6', freeze: '#1E8FC9', sw: '#C42E75', gate: '#6B5A45', bonus: '#B07A00', count: '#B3261E', char: '#4A3B2B', danger: '#B3261E' },
   contrast: { dark: false, surface: '#FFFFFF', raised: '#FFFFFF', grid: '#111111', text: '#000000', text2: '#333333', accent: '#00574F', accentSoft: '#D8F2EF', onAccent: '#FFFFFF', pathA: '#00574F', pathB: '#0A3D62', done: '#0A3D62', plate: '#C9C9C9', dead: '#C9C9C9', deadLine: '#000000', dir: '#1F2BB0', burn: '#A63F00', tele: '#5A22B8', freeze: '#005F8F', sw: '#9E1456', gate: '#222222', bonus: '#855400', count: '#A3170E', char: '#111111', danger: '#A3170E' },
+  treasure: { dark: true, surface: '#28143B', raised: '#3A1C55', grid: '#62358A', text: '#FFF5D6', text2: '#D2B7E8', accent: '#F0B642', accentSoft: '#56356F', onAccent: '#241132', pathA: '#F0B642', pathB: '#D99AFF', done: '#E2B2FF', plate: '#241132', dead: '#1D0E2D', deadLine: '#76528D', dir: '#F0B642', burn: '#FF9A52', tele: '#D99AFF', freeze: '#6CC7F5', sw: '#FF7DB0', gate: '#C9A7E2', bonus: '#FFD76A', count: '#FF7468', char: '#FFF5D6', danger: '#FF7468' },
 };
 
 /** palette for the board. Skins override the app palette only for board drawing. */

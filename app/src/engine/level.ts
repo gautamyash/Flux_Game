@@ -122,6 +122,8 @@ export function parseLevel(def: LevelDef): Level {
     around,
     gates,
     solution: def.solution,
+    mystery: def.mystery ? { ...def.mystery, hiddenCells: def.mystery.hiddenCells.slice() } : undefined,
+    boss: def.boss ? { ...def.boss, starThresholds: { ...def.boss.starThresholds } } : undefined,
     required: cells.map((c, i) => (c.kind === 'dead' || c.kind === 'bonus' ? -1 : i)).filter((i) => i >= 0),
   };
 }

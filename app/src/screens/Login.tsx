@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 import { FluxMark } from '../components/Icon';
 import { Button, Card, Screen, T } from '../components/ui';
 import { useNav } from '../nav/Nav';
-import { getState } from '../store/store';
+import { getState, setPendingReferralCode } from '../store/store';
 import { useTheme } from '../theme/ThemeProvider';
+import { fonts } from '../theme/tokens';
 import { continueAsGuest, loginWithGoogle } from '../cloud/flow';
+import { normalizeReferralCode } from '../cloud/referral';
 
 export const GUEST_NOTE = 'Guest: your progress is saved only on this phone. If you uninstall FLUX or change phones, it will be lost.';
 
@@ -14,8 +16,20 @@ export function LoginScreen() {
   const { t } = useTheme();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [referralCode, setReferralCode] = useState(getState().pendingReferralCode ?? '');
+  const [showReferralInput, setShowReferralInput] = useState(!!getState().pendingReferralCode);
 
   const next = () => nav.reset({ name: getState().onboarded ? 'home' : 'onboarding' });
+
+  const handleCodeChange = (raw: string) => {
+    const val = raw.toUpperCase();
+    setReferralCode(val);
+    if (val.trim()) {
+      setPendingReferralCode(normalizeReferralCode(val));
+    } else {
+      setPendingReferralCode(null);
+    }
+  };
 
   const google = async () => {
     if (busy) return;
@@ -44,6 +58,40 @@ export function LoginScreen() {
             <T v="small" color={t.danger}>{err}</T>
           </Card>
         ) : null}
+
+        {/* Optional Referral Code Entry */}
+        {showReferralInput ? (
+          <View style={{ gap: 4, marginBottom: 4 }}>
+            <T v="cap" color={t.text2}>INVITE CODE (OPTIONAL)</T>
+            <TextInput
+              value={referralCode}
+              onChangeText={handleCodeChange}
+              placeholder="e.g. FLUX-ABC123"
+              placeholderTextColor={t.disabled}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={{
+                height: 48,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: t.grid,
+                backgroundColor: t.raised,
+                paddingHorizontal: 14,
+                fontFamily: fonts.body,
+                fontSize: 15,
+                color: t.text,
+              }}
+            />
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => setShowReferralInput(true)}
+            style={{ alignSelf: 'center', paddingVertical: 4 }}
+          >
+            <T v="cap" color={t.accent}>Have an invite code?</T>
+          </Pressable>
+        )}
+
         {busy ? (
           <View style={{ height: 56, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="Signing in">
             <ActivityIndicator color={t.accent} />

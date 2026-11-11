@@ -1,4 +1,4 @@
-/** Return the next stable cell under the finger, preserving the board's existing inner-cell dead zone. */
+/** Return the next stable cell under the finger with directional border hysteresis. */
 export function stableCellAt(
   x: number,
   y: number,
@@ -13,8 +13,16 @@ export function stableCellAt(
   if (col < 0 || row < 0 || col >= n || row >= n) return previous;
   const next = row * n + col;
   if (next === previous || previous < 0) return next;
-  const centerX = pad + (col + 0.5) * cell;
-  const centerY = pad + (row + 0.5) * cell;
-  const margin = cell * 0.38;
-  return Math.abs(x - centerX) <= margin && Math.abs(y - centerY) <= margin ? next : previous;
+
+  const prevCol = previous % n;
+  const prevRow = Math.floor(previous / n);
+  const threshold = cell * 0.12;
+
+  // Directional border hysteresis: require a small penetration along the axis of movement
+  if (col > prevCol && x < pad + col * cell + threshold) return previous;
+  if (col < prevCol && x > pad + (col + 1) * cell - threshold) return previous;
+  if (row > prevRow && y < pad + row * cell + threshold) return previous;
+  if (row < prevRow && y > pad + (row + 1) * cell - threshold) return previous;
+
+  return next;
 }

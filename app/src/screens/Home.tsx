@@ -40,7 +40,7 @@ function EnergyIndicator() {
           {Array.from({ length: ENERGY_MAX }, (_, i) => <View key={i} style={{ width: pipWidth, height: 5, borderRadius: 3, backgroundColor: i < energy ? t.accent : t.grid }} />)}
         </View>
       </View>
-      {remaining !== null ? <T v="cap" color={t.text2}>Next energy in {energyTime(remaining)}</T> : <T v="cap" color={t.text2}>Full</T>}
+      {remaining !== null ? <T v="cap" color={t.text2}>Full refill in {energyTime(remaining)}</T> : <T v="cap" color={t.text2}>Full</T>}
     </View>
   );
 }
@@ -77,7 +77,14 @@ export function HomeScreen() {
           <Avatar name={profile.name} color={AVATAR_COLORS[profile.avatar % AVATAR_COLORS.length]} size={40} />
           <View>
             <T v="cap">{mode === 'guest' ? 'GUEST · THIS PHONE ONLY' : 'WELCOME BACK'}</T>
-            <T v="title">{profile.name || 'Player'}</T>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <T v="title">{profile.name || 'Player'}</T>
+              {profile.badge === 'prism' ? (
+                <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, backgroundColor: '#A956E5', borderWidth: 1, borderColor: '#FFD76A' }}>
+                  <T v="cap" color="#FFF" style={{ fontSize: 10, lineHeight: 12 }}>◆ Prism</T>
+                </View>
+              ) : null}
+            </View>
           </View>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -107,11 +114,15 @@ export function HomeScreen() {
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <Tile icon="bolt" label="Modes" sub="Campaign, Rush, Chaos + more" onPress={() => nav.push({ name: 'modes' })} />
-          <Tile icon="trophy" label="Badges" onPress={() => nav.push({ name: 'achievements' })} />
+          <Tile icon="star" label="Rewards" sub="Chests & power-ups" onPress={() => nav.push({ name: 'rewards' })} />
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Tile icon="trophy" label="Badges" onPress={() => nav.push({ name: 'achievements' })} />
           <Tile icon="trophy" label="Global leaderboard" sub="All-time stars" onPress={() => nav.push({ name: 'leaderboard', kind: 'global' })} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
           <Tile icon="calendar" label="Daily leaderboard" sub="Today’s puzzle" onPress={() => nav.push({ name: 'leaderboard', kind: 'daily' })} />
+          <Tile icon="star" label="Refer & Earn" sub="Invite friends, get chests" onPress={() => nav.push({ name: 'referral' })} />
         </View>
       </ScrollView>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingTop: 8 }}>

@@ -107,6 +107,53 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // -------------------------------------------------------------
+    // Refer & Earn Security Rules (Least-Privilege, Server-Enforced)
+    // -------------------------------------------------------------
+
+    // Referral code registry: read-only lookup by signed-in users; all writes are server-only.
+    match /referralCodes/{code} {
+      allow get: if signedIn();
+      allow list, write: if false;
+    }
+
+    // User referral profiles: users can read only their own profile; all writes are server-only.
+    match /userReferrals/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Referral invites: users can read only their own invites; no direct client mutations.
+    match /referralInvites/{inviteId} {
+      allow get: if signedIn()
+        && (resource.data.inviterUid == request.auth.uid || resource.data.invitedUid == request.auth.uid);
+      allow list: if signedIn()
+        && resource.data.inviterUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // User referral rewards: users can read only their own reward chests; all writes are server-only.
+    match /userReferralRewards/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+
+      match /chests/{chestId} {
+        allow get, list: if signedIn() && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    // Authoritative completion certificates: users can read only their own receipts; all writes are server-only.
+    match /userCompletionCertificates/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+
+      match /certs/{levelId} {
+        allow get, list: if signedIn() && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
     match /{document=**} { allow read, write: if false; }
   }
 }

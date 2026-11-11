@@ -14,6 +14,7 @@ export interface CellVisual {
   locked: boolean;
   err: boolean;
   hint: boolean;
+  hidden?: boolean;
   start: boolean;
   big: boolean;
 }
@@ -75,6 +76,15 @@ function dirRotation(d: Dir): number {
 
 /** Glyph + overlays (drawn above the path). */
 export const CellGlyph = React.memo(function CellGlyph({ v, t, pulse }: { v: CellVisual; t: Palette; pulse: SharedValue<number> | null }) {
+  if (v.hidden) {
+    return (
+      <G>
+        <Rect x={8} y={8} width={84} height={84} rx={18} fill={t.raised} stroke={t.accent} strokeWidth={3} strokeDasharray="7 6" />
+        <Circle cx={50} cy={50} r={5} fill={t.accent} opacity={0.55} />
+        <SvgText x={50} y={61} textAnchor="middle" fontFamily={fonts.display} fontWeight="700" fontSize={32} fill={t.accent}>?</SvgText>
+      </G>
+    );
+  }
   const plate =
     v.onPath && v.kind !== 'node' && v.kind !== 'dead' && v.kind !== 'gate' && v.kind !== 'empty' ? (
       <Circle cx={50} cy={50} r={34} fill={t.raised} stroke={t.grid} strokeWidth={1.5} />

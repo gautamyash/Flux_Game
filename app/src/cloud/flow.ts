@@ -40,6 +40,21 @@ export async function loginWithGoogle(): Promise<LoginOutcome> {
   const sync = await syncNow();
   if (!sync.ok) return { ok: false, error: sync.error };
   try { await removeAccountProgressSnapshot(r.account.uid); } catch { /* cloud sync is confirmed; a stale local backup is safe to retry later */ }
+  
+  // Refer & Earn: register referral code, claim pending code if present, sync rewards
+  void (async () => {
+    try {
+      const { claimReferralCode, getOrRegisterUserReferral, syncReferralRewards, triggerReferralCompletionCheck } = await import('./referral');
+      await getOrRegisterUserReferral(r.account.uid);
+      const pending = getState().pendingReferralCode;
+      if (pending) {
+        await claimReferralCode(r.account.uid, pending);
+      }
+      await triggerReferralCompletionCheck(r.account.uid);
+      await syncReferralRewards(r.account.uid);
+    } catch { /* offline safe */ }
+  })();
+
   return switching
     ? { ok: true, warning: 'Your previous account’s progress was kept separate on this device. Sign in to that account again to sync or restore it.' }
     : { ok: true };

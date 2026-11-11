@@ -47,7 +47,7 @@ function Pill({ icon, text, color }: { icon?: 'clock' | 'star'; text: string; co
   );
 }
 
-function ActionButton({ icon, label, onPress, badge, disabled, accessibilityLabel }: { icon: 'undo' | 'bulb' | 'restart'; label: string; onPress: () => void; badge?: string; disabled?: boolean; accessibilityLabel?: string }) {
+function ActionButton({ icon, label, onPress, badge, disabled, accessibilityLabel }: { icon: 'undo' | 'bulb' | 'restart' | 'clock'; label: string; onPress: () => void; badge?: string; disabled?: boolean; accessibilityLabel?: string }) {
   const { t } = useTheme();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} disabled={disabled} onPress={onPress}
@@ -59,11 +59,22 @@ function ActionButton({ icon, label, onPress, badge, disabled, accessibilityLabe
   );
 }
 
-function titleFor(source: GameSource, levelId: string, chapter: number, index: number, dailyDay?: string) {
+function titleFor(source: GameSource, level: import('../engine').Level, index: number, dailyDay?: string) {
   switch (source.kind) {
-    case 'classic': return { title: `Level ${levelId}`, sub: CHAPTERS[chapter - 1]?.name ?? '' };
+    case 'classic': return level.boss
+      ? { title: 'Boss Level', sub: `Chapter ${level.chapter} · ${CHAPTERS[level.chapter - 1]?.name ?? ''}` }
+      : level.mystery
+        ? { title: 'Mystery Level', sub: `${level.id} · ${CHAPTERS[level.chapter - 1]?.name ?? ''}` }
+        : { title: `Level ${level.id}`, sub: CHAPTERS[level.chapter - 1]?.name ?? '' };
     case 'master': return { title: 'Master', sub: `Puzzle ${index}` };
-    case 'campaign': return { title: `Campaign ${index}`, sub: CAMPAIGN_WORLDS.find((world) => index >= world.firstLevel && index <= world.lastLevel)?.name ?? 'FLUX Campaign' };
+    case 'campaign': {
+      const world = level.boss?.campaignWorld
+        ? CAMPAIGN_WORLDS[level.boss.campaignWorld - 1]
+        : CAMPAIGN_WORLDS.find((item) => index >= item.firstLevel && index <= item.lastLevel);
+      return level.boss ? { title: 'Boss Level', sub: `World ${level.boss.campaignWorld} · ${world?.name ?? 'Campaign'}` }
+        : level.mystery ? { title: 'Mystery Level', sub: `Campaign ${index} · ${world?.name ?? 'Campaign'}` }
+          : { title: `Campaign ${index}`, sub: world?.name ?? 'FLUX Campaign' };
+    }
     case 'daily': return { title: 'Daily Puzzle', sub: `UTC ${dailyDay ?? ''}` };
     case 'rush': return { title: 'Rush', sub: 'Solve as many as you can' };
     case 'endless': return { title: 'Endless', sub: 'One mistake ends the run' };
@@ -88,7 +99,7 @@ function EnergyDepleted({ onHome }: { onHome: () => void }) {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <Icon name="bolt" size={56} color={t.accent} />
         <T v="h1" align="center">Out of energy</T>
-        <T v="body" align="center">You’ve used all {ENERGY_MAX} energy. It refills automatically every 45 minutes.</T>
+        <T v="body" align="center">You’ve used all {ENERGY_MAX} energy. It refills automatically after 30 minutes.</T>
         <T v="title" color={t.accent}>Next full refill in {countdown}</T>
         <Button label="Return to Home" onPress={onHome} />
       </View>
@@ -126,12 +137,19 @@ export function GameScreen({ source, runId, dailyDay }: { source: GameSource; ru
   );
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: g.shake.value * 6 }] }));
   const onLayout = (e: LayoutChangeEvent) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const { title, sub } = titleFor(source, level.id, level.chapter, level.index, g.runDay);
+  const { title, sub } = titleFor(source, level, level.index, g.runDay);
+  const movesUsed = level.boss ? st.budgetMoves ?? st.moves : st.moves;
+  const movesLeft = Math.max(0, level.maxMoves - movesUsed);
+  const mysteryRevealed = level.mystery?.hiddenCells.filter((cell) => st.revealedCells?.includes(cell)).length ?? 0;
   const practice = source.kind === 'practice';
   const left = settings.leftHanded;
+  const timeFreezeLeft = g.getTimeFreezeLeft();
   const actions = [
     <ActionButton key="u" icon="undo" label="Undo" onPress={g.undo} badge={String(g.session.undosRemaining)} disabled={g.session.history.length <= 1 || g.session.undosRemaining <= 0 || st.status !== 'playing'} />,
-    <ActionButton key="h" icon="bulb" label="Hint" accessibilityLabel={`Hint, ${g.hintsRemaining} remaining`} onPress={g.hint} badge={String(g.hintsRemaining)} disabled={st.status !== 'playing'} />,
+    <ActionButton key="h" icon="bulb" label="Hint" accessibilityLabel={g.unlimitedHints ? 'Hint, unlimited active' : `Hint, ${g.hintsRemaining} remaining`} onPress={g.hint} badge={g.unlimitedHints ? '∞' : String(g.hintsRemaining)} disabled={st.status !== 'playing'} />,
+    ...(g.hasTimeFreezeCharge ? [
+      <ActionButton key="f" icon="clock" label="Freeze" accessibilityLabel="Time Freeze, 30 seconds" onPress={g.freezeTime} badge="30s" disabled={st.status !== 'playing' || !g.started || timeFreezeLeft > 0} />,
+    ] : []),
     <ActionButton key="r" icon="restart" label="Restart" onPress={() => g.setConfirmRestart(true)} />,
   ];
   const left_ = level.required.filter((i) => !st.used[i]).length;
@@ -151,13 +169,27 @@ export function GameScreen({ source, runId, dailyDay }: { source: GameSource; ru
     <Screen>
       <TopBar title={title} sub={sub} onBack={() => g.setPaused(true)} right={<IconButton icon="sliders" label="Settings" onPress={() => nav.push({ name: 'settings' })} />} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-        <T v="num">{st.moves}<T v="small"> / {level.maxMoves} moves</T></T>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <T v="num">{level.boss || level.mystery ? movesLeft : st.moves}<T v="small"> {level.boss || level.mystery ? 'moves left' : `/ ${level.maxMoves} moves`}</T></T>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          {timeFreezeLeft > 0 ? <Pill text={`❄ ${Math.ceil(timeFreezeLeft / 1000)}s`} color="#6CC7F5" /> : null}
           {level.cells.some((c) => c.kind === 'bonus') ? <Pill icon="star" text={st.bonuses.length ? 'Bonus' : 'Bonus ?'} color={t.bonus} /> : null}
           <Clock read={g.timed ? g.getRushLeft : g.getSeconds} timed={g.timed} />
           {g.timed ? <Pill text={`${g.score} solved`} color={t.accent} /> : null}
         </View>
       </View>
+      {level.mystery ? (
+        <View accessibilityRole="text" accessibilityLabel={`Mystery level, ${level.mystery.hiddenCells.length - mysteryRevealed} hidden, ${mysteryRevealed} revealed, ${movesLeft} moves remaining`} style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 4 }}>
+          <Pill text="MYSTERY" color={t.accent} />
+          <Pill text={`${level.mystery.hiddenCells.length - mysteryRevealed} hidden`} color={t.text2} />
+          <Pill text={`${mysteryRevealed} revealed`} color={t.success} />
+        </View>
+      ) : null}
+      {level.boss ? (
+        <View accessibilityRole="text" accessibilityLabel={`Boss level, chapter ${level.chapter}, ${movesLeft} moves remaining, ${g.session.undosRemaining} undos remaining`} style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 4 }}>
+          <Pill text={source.kind === 'campaign' ? `BOSS · WORLD ${level.boss.campaignWorld}` : `BOSS · CHAPTER ${level.chapter}`} color={t.bonus} />
+          <Pill text={`${g.session.undosRemaining} undos`} color={t.accent} />
+        </View>
+      ) : null}
       {g.timed ? (
         <RushBar read={g.getRushLeft} />
       ) : null}

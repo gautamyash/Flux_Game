@@ -4,6 +4,7 @@ import type { GameState, Level } from '../engine';
 export function describeCell(level: Level, st: GameState, i: number): string {
   const n = level.size;
   const pos = `Row ${Math.floor(i / n) + 1}, column ${(i % n) + 1}`;
+  if (level.mystery?.hiddenCells.includes(i) && !st.revealedCells?.includes(i)) return `${pos}, hidden cell`;
   const c = level.cells[i];
   const bits: string[] = [];
   switch (c.kind) {

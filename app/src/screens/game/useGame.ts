@@ -3,20 +3,20 @@ import { AccessibilityInfo, AppState } from 'react-native';
 import { useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import {
   GameState, Level, MoveEvent, Session, MAX_UNDOS_PER_RUN, createSession, current, enteredCells, eventMessage, invalidMessage, restart,
-  hintFor, retractTarget, sessionMove, sessionUndo, starsFor, validateMove,
+  hintFor, retractTarget, sessionMove, sessionRetract, sessionRewindTo, sessionUndo, starsFor, validateMove,
 } from '../../engine';
 import { boardGeom, cellAt, cellCenter } from '../../components/Board';
 import { GameSource, useNav } from '../../nav/Nav';
 import { dailyLevel, chaosLevel, endlessLevel, practiceLevel, rushLevel } from '../../lib/procedural';
-import { campaignComplete, campaignLevelNumber, getLevel, mechanicsOf, newlyUnlockedCampaignWorld, nextCampaignLevelId, nextLevelId, MECH_INTRO, Mech } from '../../lib/levels';
+import { campaignComplete, getLevel, mechanicsOf, newlyUnlockedCampaignWorld, nextCampaignLevelId, nextLevelId, MECH_INTRO, Mech } from '../../lib/levels';
 import { evaluateAchievements } from '../../lib/achievements';
 import { haptic } from '../../lib/haptics';
 import { sfx } from '../../lib/sound';
 import { submitCampaignRun, submitDailyRun, submitGlobalRun } from '../../cloud/leaderboards';
 import type { SubmissionResult } from '../../cloud/leaderboards';
 import {
-  HINTS_MAX, HINTS_REFILL_MS, SolveOutcome, adoptSavedRun, beginEnergyRun, dateKey, getState, isRunActive, markSeen, refreshHints, saveResume, recordClassicSolve, recordDailySolve, recordHint,
-  recordOtherSolve, recordRunBest, setLastLevel, setOnboarded, spendHint, trustedNow, useSettings, useStore,
+  HINTS_MAX, HINTS_REFILL_MS, SolveOutcome, activateTimeFreeze, adoptSavedRun, beginEnergyRun, claimExtraUndoForRun, dateKey, finishExtraUndoForRestart, finishExtraUndoRun, getState, isRunActive, markSeen, refreshHints, refreshRewardState, saveResume, recordCampaignSolve, recordClassicSolve, recordDailySolve, recordHint,
+  recordOtherSolve, recordRunBest, setLastLevel, setOnboarded, spendHint, timeFreezeRemainingMs, trustedNow, useSettings, useStore,
 } from '../../store/store';
 
 export const RUSH_SECONDS = 180;
@@ -70,6 +70,12 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const [hintsUsed, setHintsUsed] = useState(0);
   const hintsRemaining = useStore((s) => s.hintsRemaining);
   const hintsRefillStartedAt = useStore((s) => s.hintsRefillStartedAt);
+  const completionRewards = useStore((s) => s.completionRewards);
+  const [rewardNow, setRewardNow] = useState(trustedNow());
+  const unlimitedHints = source.kind !== 'daily' && Object.values(completionRewards).some((reward) => reward.rewardId === 'unlimited-hints'
+    && reward.status === 'active' && (reward.effectEndsAt ?? 0) > rewardNow);
+  const canActivateTimeFreeze = ['classic', 'campaign', 'master', 'rush'].includes(source.kind);
+  const hasTimeFreezeCharge = canActivateTimeFreeze && Object.values(completionRewards).some((reward) => reward.rewardId === 'time-freeze' && reward.status === 'redeemed');
   const [hintsNow, setHintsNow] = useState(trustedNow());
   const secRef = useRef(0);
   const leftRef = useRef(RUSH_SECONDS);
@@ -88,6 +94,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const [leaderboardSubmission, setLeaderboardSubmission] = useState<SubmissionResult | 'pending' | null>(null);
   const leaderboardTask = useRef<(() => Promise<SubmissionResult>) | null>(null);
   const completedPuzzle = useRef<string | null>(null);
+  const extraUndoReward = useRef<string | null>(null);
 
   const sendLeaderboardSubmission = useCallback((task: () => Promise<SubmissionResult>) => {
     leaderboardTask.current = task;
@@ -117,6 +124,12 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const clearHints = useCallback(() => setHintCells((h) => (h.length ? [] : h)), []);
 
   useEffect(() => {
+    refreshRewardState();
+    const id = setInterval(() => { refreshRewardState(); setRewardNow(trustedNow()); }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     if (hintsRefillStartedAt === null) return;
     const tick = () => {
       refreshHints();
@@ -139,21 +152,35 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
 
   // new level -> reset
   useEffect(() => {
+    geomRef.current = boardGeom(geomRef.current.size, level.size);
     let sess = createSession(level);
     let restored = false;
     const rs = getState().resume;
     const canResume = source.kind === 'classic' || source.kind === 'master' || source.kind === 'daily' || source.kind === 'campaign';
     if (canResume && rs && (!rs.runId || rs.runId === runId) && rs.levelId === level.id && (source.kind !== 'daily' || rs.day === runDay)) {
-      sess = createSession(level, rs.undoRemaining);
+      sess = createSession(level, rs.undoRemaining, rs.undoLimit ?? level.boss?.undoAllowance ?? MAX_UNDOS_PER_RUN);
       for (const c of rs.entered) {
         const m = sessionMove(sess, c);
         if (!m.result.ok) break;
         sess = m.session;
       }
       restored = current(sess).status === 'playing'
-        && (sess.history.length > 1 || (rs.undoRemaining ?? MAX_UNDOS_PER_RUN) < MAX_UNDOS_PER_RUN);
+        && (sess.history.length > 1 || (rs.undoRemaining ?? MAX_UNDOS_PER_RUN) < MAX_UNDOS_PER_RUN
+          || !!rs.revealedCells?.length || !!(level.boss && rs.budgetMoves));
+      if (restored) {
+        const tail = current(sess);
+        sess.history[sess.history.length - 1] = {
+          ...tail,
+          revealedCells: [...new Set([...(tail.revealedCells ?? []), ...(rs.revealedCells ?? [])])],
+          ...(level.boss ? { budgetMoves: Math.max(tail.budgetMoves ?? tail.moves, rs.budgetMoves ?? 0) } : {}),
+        };
+      }
       if (!restored) sess = createSession(level);
     }
+    const extraUndo = claimExtraUndoForRun(runId, source, level, !restored);
+    if (!restored) sess = createSession(level, extraUndo.undoLimit, extraUndo.undoLimit);
+    else if (rs?.undoLimit === undefined && extraUndo.undoLimit > sess.undoLimit) sess = createSession(level, sess.undosRemaining, extraUndo.undoLimit);
+    extraUndoReward.current = restored ? rs?.extraUndoRewardId ?? null : extraUndo.rewardId;
     apply(sess);
     if (restored && rs?.runId === '') { adoptSavedRun(runId); setEnergyDenied(false); }
     else setEnergyDenied(!beginEnergyRun(runId));
@@ -164,7 +191,10 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     sweep.value = 2;
     if (source.kind === 'classic' || source.kind === 'master') setLastLevel(level.id);
     const seen = getState().seen;
-    for (const m of mechanicsOf(level)) {
+    const visibleMechanics = level.mystery
+      ? mechanicsOf(level).filter((m) => level.cells.some((cell, i) => cell.kind === m && !level.mystery?.hiddenCells.includes(i)))
+      : mechanicsOf(level);
+    for (const m of visibleMechanics) {
       if (m === 'bonus' || source.kind === 'practice') continue;
       if (!seen['mech:' + m]) { setIntro(m); markSeen('mech:' + m); break; }
     }
@@ -175,14 +205,17 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   useEffect(() => {
     if (!started || paused || overlayOpen || st.status !== 'playing') return;
     const id = setInterval(() => {
-      secRef.current += 1;
-      if (timed) {
-        leftRef.current = Math.max(0, leftRef.current - 1);
-        if (leftRef.current === 0) setRushOver(true);
+      const isFrozen = canActivateTimeFreeze && timeFreezeRemainingMs() > 0;
+      if (!isFrozen) {
+        secRef.current += 1;
+        if (timed) {
+          leftRef.current = Math.max(0, leftRef.current - 1);
+          if (leftRef.current === 0) setRushOver(true);
+        }
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [started, paused, overlayOpen, st.status, timed]);
+  }, [started, paused, overlayOpen, st.status, timed, canActivateTimeFreeze]);
 
   useEffect(() => {
     if (timed && rushOver && !runOver) {
@@ -200,11 +233,16 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     if (!resumable || !isRunActive(runId)) return;
     const cur = current(sessRef.current);
     const entered = enteredCells(level, cur);
-    if (cur.status !== 'playing' || (entered.length === 0 && sessRef.current.undosRemaining === MAX_UNDOS_PER_RUN)) {
+    const revealedCells = cur.revealedCells ?? [];
+    const budgetMoves = cur.budgetMoves ?? cur.moves;
+    if (cur.status !== 'playing' || (entered.length === 0 && sessRef.current.undosRemaining === MAX_UNDOS_PER_RUN
+      && revealedCells.length === 0 && (!level.boss || budgetMoves === 0))) {
       if (getState().resume?.levelId === level.id) saveResume(null);
       return;
     }
-    saveResume({ runId, source, levelId: level.id, day: runDay ?? dateKey(), entered, undoRemaining: sessRef.current.undosRemaining, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
+    saveResume({ runId, source, levelId: level.id, day: runDay ?? dateKey(), entered, undoRemaining: sessRef.current.undosRemaining,
+      undoLimit: sessRef.current.undoLimit, extraUndoRewardId: extraUndoReward.current,
+      revealedCells, budgetMoves, seconds: secRef.current, hints: hintsRef.current, savedAt: Date.now() });
   }, [resumable, level, source, runId, runDay]);
   useEffect(() => { persistResume(); }, [session, persistResume]);
   useEffect(() => () => persistResume(), [persistResume]);
@@ -224,13 +262,15 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     const completionKey = `${runId}:${level.id}:${index}`;
     if (completedPuzzle.current === completionKey) return;
     completedPuzzle.current = completionKey;
+    finishExtraUndoRun(runId);
     if (getState().resume?.levelId === level.id) saveResume(null);
     haptic('success'); sfx('solve');
     sweep.value = 2;
     if (!settings.reduceMotion) sweep.value = withTiming(1, { duration: 900 });
     else sweep.value = 1;
-    const stars = starsFor(level, fin.moves, secRef.current, hintsUsed);
-    const info = { moves: fin.moves, time: secRef.current, hints: hintsUsed, bonus: fin.bonuses.length > 0, stars };
+    const scoredMoves = level.boss ? fin.budgetMoves ?? fin.moves : fin.moves;
+    const stars = starsFor(level, scoredMoves, secRef.current, hintsUsed);
+    const info = { moves: scoredMoves, time: secRef.current, hints: hintsUsed, bonus: fin.bonuses.length > 0, stars, path: fin.path };
     let outcome: SolveOutcome | null = null;
     let streak: number | null = null;
     let campaignWorldUnlocked: string | null = null;
@@ -245,10 +285,10 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       outcome = recordClassicSolve(level, info, evaluateAchievements);
       sendLeaderboardSubmission(() => submitGlobalRun(runId));
     } else if (source.kind === 'campaign') {
-      const before = getState().levels;
-      outcome = recordClassicSolve(level, info, evaluateAchievements);
-      campaignWorldUnlocked = newlyUnlockedCampaignWorld(before, getState().levels)?.name ?? null;
-      campaignFinished = outcome.firstSolve && campaignComplete(getState().levels);
+      const before = getState().campaignLevels;
+      outcome = recordCampaignSolve(level, info, evaluateAchievements);
+      campaignWorldUnlocked = newlyUnlockedCampaignWorld(before, getState().campaignLevels)?.name ?? null;
+      campaignFinished = outcome.firstSolve && campaignComplete(getState().campaignLevels);
       sendLeaderboardSubmission(() => submitCampaignRun(runId));
     }
     else if (source.kind === 'daily') {
@@ -266,10 +306,11 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       setTimeout(() => setIndex((i) => i + 1), 700);
       return;
     }
-    setTimeout(() => setResult({ hints: hintsUsed, stars, badges: ach, moves: fin.moves, time: secRef.current, bonus: info.bonus, outcome, streak, campaignWorldUnlocked, campaignComplete: campaignFinished }), 900);
+    setTimeout(() => setResult({ hints: hintsUsed, stars, badges: ach, moves: scoredMoves, time: secRef.current, bonus: info.bonus, outcome, streak, campaignWorldUnlocked, campaignComplete: campaignFinished }), 900);
   }, [level, hintsUsed, source, settings.reduceMotion, nav, sweep, runId, index, runDay, sendLeaderboardSubmission]);
 
   const onFailed = useCallback((fin: GameState) => {
+    finishExtraUndoRun(runId);
     haptic('error'); sfx('fail');
     if (source.kind === 'endless') {
       const b = recordRunBest('endless', score, evaluateAchievements);
@@ -278,7 +319,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       return;
     }
     setTimeout(() => setFailView(true), 450);
-  }, [source, score]);
+  }, [source, score, runId]);
 
   const handleEvents = useCallback((events: MoveEvent[]) => {
     for (const e of events) {
@@ -305,7 +346,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const tryStep = useCallback((to: number): boolean => {
     const s = sessRef.current;
     if (to === retractTarget(s)) {
-      sessRef.current = sessionUndo(s);
+      sessRef.current = sessionRetract(s);
       dirty.current = true;
       return true;
     }
@@ -337,16 +378,26 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const lastPt = useRef<{ x: number; y: number } | null>(null);
   const fingerCell = useRef(-1);
 
-  /** cell under a point, with a dead zone near cell borders so the finger cannot flicker between cells */
+  /** cell under a point, with directional boundary hysteresis to prevent micro-flicker near borders */
   const cellWithHysteresis = (x: number, y: number): number => {
     const g = geomRef.current;
     const c = cellAt(g, x, y);
     if (c < 0) return fingerCell.current;
     if (c === fingerCell.current || fingerCell.current < 0) return c;
-    const cx = cellCenter(g, c);
-    const m = 0.5 - 0.12; // must be inside the inner 76% of the new cell
-    if (Math.abs(x - cx.x) <= g.cell * m && Math.abs(y - cx.y) <= g.cell * m) return c;
-    return fingerCell.current;
+
+    const prev = fingerCell.current;
+    const prevCol = prev % g.n;
+    const prevRow = Math.floor(prev / g.n);
+    const col = c % g.n;
+    const row = Math.floor(c / g.n);
+    const threshold = g.cell * 0.12;
+
+    if (col > prevCol && x < g.pad + col * g.cell + threshold) return prev;
+    if (col < prevCol && x > g.pad + (col + 1) * g.cell - threshold) return prev;
+    if (row > prevRow && y < g.pad + row * g.cell + threshold) return prev;
+    if (row < prevRow && y > g.pad + (row + 1) * g.cell - threshold) return prev;
+
+    return c;
   };
 
   /** walk the head toward the cell under the finger, one legal step at a time */
@@ -356,26 +407,54 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       const s = sessRef.current;
       const cur = current(s);
       if (cur.status !== 'playing' || target === cur.head) return;
-      // dragging back over the own line: retract until the head sits on the finger cell
-      if (cur.used[target] && s.history.some((h) => h.head === target)) {
-        if (!tryStep(retractTarget(s) as number)) return;
+
+      // Backward retraction: only for immediate preceding step or 2 steps back along recent history
+      const retTarget = retractTarget(s);
+      if (target === retTarget) {
+        if (!tryStep(target)) return;
         continue;
       }
+      const prevPrev = s.history.length >= 3 ? s.history[s.history.length - 3].head : -1;
+      if (target === prevPrev && retTarget !== null) {
+        if (!tryStep(retTarget)) return;
+        continue;
+      }
+
+      // If target is an already-used cell further back on the path, never retract or wipe the line
+      if (cur.used[target]) {
+        return;
+      }
+
       const hr = Math.floor(cur.head / n), hc = cur.head % n;
       const tr = Math.floor(target / n), tc = target % n;
       const dr = tr - hr, dc = tc - hc;
       let next: number;
-      if (Math.abs(dr) + Math.abs(dc) === 1) next = target;
-      else if (Math.abs(dr) === 1 && Math.abs(dc) === 1) {
+      if (Math.abs(dr) + Math.abs(dc) === 1) {
+        next = target;
+      } else if (Math.abs(dr) === 1 && Math.abs(dc) === 1) {
         // diagonal: go through whichever corner cell is legal, preferring the one nearer the finger
         const a = hr * n + tc, b = tr * n + hc;
         const g = geomRef.current;
         const da = Math.hypot(cellCenter(g, a).x - px, cellCenter(g, a).y - py);
         const db = Math.hypot(cellCenter(g, b).x - px, cellCenter(g, b).y - py);
         const [first, second] = da <= db ? [a, b] : [b, a];
-        next = validateMove(s.level, cur, first) === null ? first : second;
-      } else if (Math.abs(dc) >= Math.abs(dr)) next = hr * n + hc + (dc > 0 ? 1 : -1);
-      else next = (hr + (dr > 0 ? 1 : -1)) * n + hc;
+        const firstOk = validateMove(s.level, cur, first) === null;
+        const secondOk = validateMove(s.level, cur, second) === null;
+        if (firstOk) next = first;
+        else if (secondOk) next = second;
+        else return;
+      } else {
+        const stepH = dc !== 0 ? hr * n + hc + (dc > 0 ? 1 : -1) : -1;
+        const stepV = dr !== 0 ? (hr + (dr > 0 ? 1 : -1)) * n + hc : -1;
+        let primary = Math.abs(dc) >= Math.abs(dr) ? stepH : stepV;
+        let secondary = primary === stepH ? stepV : stepH;
+        if (primary < 0) primary = secondary;
+        if (secondary < 0) secondary = primary;
+        const primaryOk = primary >= 0 && validateMove(s.level, cur, primary) === null;
+        const secondaryOk = secondary >= 0 && validateMove(s.level, cur, secondary) === null;
+        next = primaryOk ? primary : secondaryOk ? secondary : primary;
+        if (next < 0) return;
+      }
       if (!tryStep(next)) return;
     }
   };
@@ -383,21 +462,28 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   const onBegin = useCallback((x: number, y: number) => {
     if (overlayOpen) return;
     const s = sessRef.current;
-    if (current(s).status !== 'playing') return;
+    const cur = current(s);
+    if (cur.status !== 'playing') return;
     lastInvalid.current = '';
     dragging.current = true;
     lastPt.current = { x, y };
     const i = cellAt(geomRef.current, x, y);
     fingerCell.current = i;
     if (i < 0) return;
-    // touching the own line cuts it back to that cell
-    const k = s.history.findIndex((h, idx) => idx < s.history.length - 1 && h.head === i);
-    if (k >= 0) {
-      sessRef.current = { level: s.level, history: s.history.slice(0, k + 1), undosRemaining: s.undosRemaining };
+
+    // Touching the immediate retract target retracts one step predictably
+    if (i === retractTarget(s)) {
+      sessRef.current = sessionRetract(s);
       dirty.current = true;
       flush();
       return;
     }
+
+    // Touching an earlier cell on the line must NEVER delete or reset the path
+    if (cur.used[i]) {
+      return;
+    }
+
     stepToward(i, x, y);
     flush();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -445,20 +531,28 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
   }, [apply]);
 
   const doRestart = useCallback(() => {
+    finishExtraUndoForRestart(runId);
+    extraUndoReward.current = null;
     apply(restart(sessRef.current)); clearHints(); setConfirmRestart(false); setFailView(false);
     secRef.current = 0; setStarted(false); sweep.value = 2; saveResume(null); setResult(null);
-  }, [apply, sweep]);
+  }, [apply, sweep, runId]);
 
   const hint = useCallback(() => {
     if (st.status !== 'playing') return;
     const h = hintFor(level, st);
     if (!h || !h.cells.length) { say('No hint available here. Try undoing a few steps.', 'info'); return; }
-    if (!spendHint()) { setHintLimit(true); return; }
+    if (!spendHint(trustedNow(), source.kind !== 'daily')) { setHintLimit(true); return; }
     if (h.undo) say('This path cannot finish. Undo to the highlighted cells and go that way.', 'info');
     setHintCells(h.cells); sfx('hint');
     setHintsUsed((n) => n + 1);
     recordHint();
-  }, [st, level, say]);
+  }, [st, level, say, source.kind]);
+
+  const freezeTime = useCallback(() => {
+    if (!canActivateTimeFreeze || !started || st.status !== 'playing') return;
+    activateTimeFreeze();
+  }, [canActivateTimeFreeze, started, st.status]);
+  const getTimeFreezeLeft = useCallback(() => (canActivateTimeFreeze ? timeFreezeRemainingMs() : 0), [canActivateTimeFreeze]);
 
   const goNext = useCallback(() => {
     if (source.kind === 'classic' || source.kind === 'master') {
@@ -467,7 +561,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
       else nav.reset({ name: 'home' });
     } else if (source.kind === 'campaign') {
       const nx = nextCampaignLevelId(level.id);
-      if (nx && campaignLevelNumber(nx) > 0) nav.replaceGame({ kind: 'campaign', levelId: nx });
+      if (nx) nav.replaceGame({ kind: 'campaign', levelId: nx });
       else nav.reset({ name: 'campaign' });
     } else if (source.kind === 'chaos') {
       setResult(null); setIndex((i) => i + 1);
@@ -480,7 +574,7 @@ export function useGame(source: GameSource, runId: string, dailyDay?: string) {
     level, runDay, session, st, feedback, errCell, hintCells, hintsUsed, paused, setPaused,
     confirmRestart, setConfirmRestart, hintLimit, setHintLimit, hintRefillMs, hintsRemaining, result, failView, setFailView,
     intro: intros, closeIntro: () => setIntro(null), badgeToast, clearToast: () => setBadgeToast([]),
-    leaderboardSubmission, retryLeaderboardSubmission,
+    leaderboardSubmission, retryLeaderboardSubmission, unlimitedHints, hasTimeFreezeCharge, canActivateTimeFreeze, freezeTime, getTimeFreezeLeft,
     runOver, score, timed, getSeconds: () => secRef.current, getRushLeft: () => leftRef.current, shake, pulse, sweep, started, energyDenied,
     setBoardSize, onBegin, onMove, onEnd, tapCell, undo, doRestart, hint, goNext, overlayOpen, source,
   };

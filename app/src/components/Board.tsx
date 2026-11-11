@@ -103,8 +103,9 @@ export function buildPath(geom: BoardGeom, path: number[]) {
 export function visualOf(level: Level, st: GameState, i: number, opts: { err?: number | null; hints?: Set<number>; large?: boolean }): CellVisual {
   const c = level.cells[i];
   const onPath = st.used[i];
+  const hidden = !!level.mystery?.hiddenCells.includes(i) && !st.revealedCells?.includes(i);
   const v: CellVisual = {
-    kind: c.kind,
+    kind: hidden ? 'empty' : c.kind,
     state: 'idle',
     n: 0,
     dir: c.dir ?? 'r',
@@ -113,6 +114,7 @@ export function visualOf(level: Level, st: GameState, i: number, opts: { err?: n
     locked: !onPath && frozenFor(st, i, level) > 0,
     err: opts.err === i,
     hint: !!opts.hints?.has(i),
+    hidden,
     start: false,
     big: !!opts.large,
   };
@@ -159,7 +161,7 @@ export function visualOf(level: Level, st: GameState, i: number, opts: { err?: n
 
 function sameVisual(a: CellVisual, b: CellVisual) {
   return (
-    a.kind === b.kind && a.state === b.state && a.n === b.n && a.dir === b.dir && a.pair === b.pair &&
+    a.kind === b.kind && a.state === b.state && a.n === b.n && a.dir === b.dir && a.pair === b.pair && a.hidden === b.hidden &&
     a.onPath === b.onPath && a.locked === b.locked && a.err === b.err && a.hint === b.hint && a.start === b.start && a.big === b.big
   );
 }
@@ -212,8 +214,8 @@ const StaticTiles = React.memo(function StaticTiles({ level, size, t }: { level:
   const scale = geom.cell / 100;
   const tiles = useMemo(
     () =>
-      level.cells.map((c): CellVisual => ({
-        kind: c.kind, state: 'idle', n: 0, dir: c.dir ?? 'r', pair: c.pair ?? 1, onPath: false, locked: false,
+      level.cells.map((c, i): CellVisual => ({
+        kind: level.mystery?.hiddenCells.includes(i) ? 'empty' : c.kind, state: 'idle', n: 0, dir: c.dir ?? 'r', pair: c.pair ?? 1, onPath: false, locked: false,
         err: false, hint: false, start: false, big: false,
       })),
     [level],
@@ -282,6 +284,12 @@ export const Board = React.memo(function Board({ level, state, size, t, pulse = 
     const target = row * geom.n + col;
     // The portal bridge already represents this jump; do not draw a straight line back to its entrance.
     if (justTeleported && target === teleEntrance) return false;
+
+    // Only connect the preview line when the finger is in or adjacent to the head cell, or within immediate drawing reach
+    const headRow = Math.floor(state.head / geom.n);
+    const headCol = state.head % geom.n;
+    const isAdjacentOrSame = Math.abs(row - headRow) + Math.abs(col - headCol) <= 1;
+    if (!isAdjacentOrSame && Math.hypot(x - head.x, y - head.y) > geom.cell * 1.4) return false;
 
     // Hide the connector if its straight segment cuts through another portal.
     const dx = x - head.x;

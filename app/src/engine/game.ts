@@ -18,6 +18,8 @@ export function createState(level: Level): GameState {
     head: level.start,
     nextNode: 2,
     moves: 0,
+    budgetMoves: 0,
+    revealedCells: [],
     flips: 0,
     freezes: [],
     bonuses: [],
@@ -75,7 +77,9 @@ export function validateMove(level: Level, st: GameState, to: number): InvalidMo
     if (st.used[p]) return bad('portal', to);
   }
   const cost = c.kind === 'burn' ? 2 : 1;
-  if (st.moves + cost > level.maxMoves) return bad('no-moves', to);
+  const budgetMoves = st.budgetMoves ?? st.moves;
+  const moveLimit = level.boss?.moveLimit ?? level.maxMoves;
+  if ((level.boss ? budgetMoves : st.moves) + cost > moveLimit) return bad('no-moves', to);
   return null;
 }
 
@@ -104,6 +108,15 @@ export function applyMove(level: Level, st: GameState, to: number, checkTrapped 
   let nextNode = st.nextNode;
   let head = to;
   let moves = st.moves + (c.kind === 'burn' ? 2 : 1);
+  const budgetMoves = (st.budgetMoves ?? st.moves) + (c.kind === 'burn' ? 2 : 1);
+  const revealedCells = new Set(st.revealedCells ?? []);
+  if (level.mystery) {
+    const discoveredFrom = c.kind === 'tele' ? [to, level.partner[to]] : [to];
+    for (const hidden of level.mystery.hiddenCells) {
+      if (discoveredFrom.some((cell) => cell === hidden
+        || (level.mystery?.discoverOn === 'adjacent' && level.around[cell].includes(hidden)))) revealedCells.add(hidden);
+    }
+  }
   used[to] = true;
   path.push(to);
 
@@ -147,6 +160,8 @@ export function applyMove(level: Level, st: GameState, to: number, checkTrapped 
     head,
     nextNode,
     moves,
+    budgetMoves,
+    revealedCells: [...revealedCells],
     flips,
     freezes,
     bonuses,
@@ -167,7 +182,7 @@ export function applyMove(level: Level, st: GameState, to: number, checkTrapped 
       if (v === 1) events.push({ type: 'countdown-warning', cell: i, value: v });
     }
   }
-  if (moves >= level.maxMoves) return { ok: true, state: failState(next, 'moves'), events };
+  if ((level.boss ? budgetMoves >= level.boss.moveLimit : moves >= level.maxMoves)) return { ok: true, state: failState(next, 'moves'), events };
   if (checkTrapped && legalMoves(level, next).length === 0) {
     next = failState(next, 'trapped');
   }
@@ -181,12 +196,15 @@ export interface Session {
   history: GameState[];
   /** Remaining undo actions for this puzzle run. */
   undosRemaining: number;
+  /** Initial allowance for this session; normally 3, at most 5 with Extra Undo. */
+  undoLimit: number;
 }
 
-export const MAX_UNDOS_PER_RUN = 2;
+export const MAX_UNDOS_PER_RUN = 3;
 
-export function createSession(level: Level, undosRemaining = MAX_UNDOS_PER_RUN): Session {
-  return { level, history: [createState(level)], undosRemaining: Math.max(0, Math.min(MAX_UNDOS_PER_RUN, undosRemaining)) };
+export function createSession(level: Level, undosRemaining = level.boss?.undoAllowance ?? MAX_UNDOS_PER_RUN, undoLimit = level.boss?.undoAllowance ?? MAX_UNDOS_PER_RUN): Session {
+  const limit = Math.max(0, Math.min(MAX_UNDOS_PER_RUN + 2, Math.round(undoLimit)));
+  return { level, history: [createState(level)], undoLimit: limit, undosRemaining: Math.max(0, Math.min(limit, Math.round(undosRemaining))) };
 }
 
 export function current(s: Session): GameState {
@@ -201,7 +219,27 @@ export function sessionMove(s: Session, to: number): { session: Session; result:
 
 export function sessionUndo(s: Session): Session {
   if (s.history.length <= 1 || s.undosRemaining <= 0) return s;
-  return { ...s, history: s.history.slice(0, -1), undosRemaining: s.undosRemaining - 1 };
+  return sessionRewindTo(s, s.history.length - 2, s.undosRemaining - 1);
+}
+
+/** Retract one step during gesture drawing without spending an undo allowance. */
+export function sessionRetract(s: Session): Session {
+  if (s.history.length <= 1) return s;
+  return sessionRewindTo(s, s.history.length - 2, s.undosRemaining);
+}
+
+/** Rewind path history while retaining Mystery discoveries and Boss move-budget spend. */
+export function sessionRewindTo(s: Session, historyIndex: number, undosRemaining = s.undosRemaining): Session {
+  const history = s.history.slice(0, Math.max(1, historyIndex + 1));
+  const currentState = current(s);
+  const restored = history[history.length - 1];
+  const revealedCells = new Set(s.history.flatMap((state) => state.revealedCells ?? []));
+  history[history.length - 1] = {
+    ...restored,
+    revealedCells: [...revealedCells],
+    ...(s.level.boss ? { budgetMoves: Math.max(currentState.budgetMoves ?? currentState.moves, restored.budgetMoves ?? restored.moves) } : {}),
+  };
+  return { ...s, history, undosRemaining };
 }
 
 /** head cell of the previous snapshot: dragging onto it retracts one step */
@@ -211,7 +249,9 @@ export function retractTarget(s: Session): number | null {
 }
 
 export function restart(s: Session): Session {
-  return createSession(s.level);
+  // The one-shot Extra Undo reward is consumed at the first run start and is not renewed by restart.
+  const limit = Math.min(MAX_UNDOS_PER_RUN, s.level.boss?.undoAllowance ?? s.undoLimit);
+  return createSession(s.level, limit, limit);
 }
 
 /* ---------- scoring ---------- */
@@ -228,7 +268,10 @@ export function parSeconds(level: Level): number {
  *  - hints:  0 = 3, 1-2 = 2, 3+ = 1
  */
 export function starsFor(level: Level, moves: number, seconds = 0, hints = 0): 1 | 2 | 3 {
-  const m = moves <= level.optimal ? 3 : moves <= level.optimal + 2 ? 2 : 1;
+  const thresholds = level.boss?.starThresholds;
+  const m = thresholds
+    ? moves <= thresholds.three ? 3 : moves <= thresholds.two ? 2 : 1
+    : moves <= level.optimal ? 3 : moves <= level.optimal + 2 ? 2 : 1;
   const par = parSeconds(level);
   const t = seconds <= 0 || seconds <= par ? 3 : seconds <= par * 2.2 ? 2 : 1;
   const h = hints === 0 ? 3 : hints <= 2 ? 2 : 1;

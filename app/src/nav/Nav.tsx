@@ -33,6 +33,8 @@ export type Route =
   | { name: 'achievements' }
   | { name: 'settings' }
   | { name: 'themes' }
+  | { name: 'rewards' }
+  | { name: 'referral' }
   | { name: 'privacy' };
 
 interface NavApi {

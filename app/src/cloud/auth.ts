@@ -29,6 +29,10 @@ function firebase() {
   return { app: appInst, auth: authInst, db: dbInst };
 }
 
+export function getFirebase() {
+  return firebase();
+}
+
 function google() {
   const { GoogleSignin } = require('@react-native-google-signin/google-signin');
   if (!configured) {
